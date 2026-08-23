@@ -22,6 +22,9 @@
       #refresh-all { cursor: pointer; }
       #status { margin-bottom: 10px; color: #666; }
       #filter { margin-bottom: 10px; padding: 4px; width: 300px; }
+      /* Console columns are marked on the cells themselves rather than by index,
+         since the status classes above rewrite className on every refresh. */
+      table.hide-extra [data-extra] { display: none; }
     </style>
   </head>
   <body>
@@ -36,6 +39,7 @@
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
+    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console targets</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
       <span class="y">✓ passed</span>
@@ -45,7 +49,7 @@
       <span class="u">— no such job</span>
       <span class="u">? no pipeline data</span>
     </div>
-    <table>
+    <table id="cores-table" class="hide-extra">
       <thead>
         <tr>
           <th>Core</th>
@@ -53,14 +57,31 @@
           <th>win-x64</th>
           <th>win-i686</th>
           <th>linux-x64</th>
+          <th>linux-i686</th>
           <th>linux-aarch64</th>
           <th>osx-x64</th>
           <th>osx-arm64</th>
           <th>ios-arm64</th>
           <th>tvos-arm64</th>
           <th>android-arm64-v8a</th>
+          <th>android-v7a</th>
           <th>android-x86_64</th>
           <th>android-x86</th>
+          <th>webos</th>
+          <th data-extra>switch</th>
+          <th data-extra>vita</th>
+          <th data-extra>wiiu</th>
+          <th data-extra>3ds</th>
+          <th data-extra>wii</th>
+          <th data-extra>ngc</th>
+          <th data-extra>psp</th>
+          <th data-extra>ps2</th>
+          <th data-extra>wasm</th>
+          <th data-extra>miyoo</th>
+          <th data-extra>dingux</th>
+          <th data-extra>dingux-ob</th>
+          <th data-extra>retrofw</th>
+          <th data-extra>rs90</th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>
@@ -70,8 +91,21 @@
       const GITLAB_URL = 'https://git.libretro.com';
       const GROUP = 'libretro';
       const PAGE_SIZE = 50;
-      const PLATFORMS = ['windows-x64', 'windows-i686', 'linux-x64', 'linux-aarch64', 'osx-x64', 'osx-arm64',
-                         'ios-arm64', 'tvos-arm64', 'android-arm64', 'android-x86_64', 'android-x86'];
+      // Desktop/mobile targets, always shown. Roughly the platforms most cores in
+      // the group actually build (each of these is on 165+ of the 207 cores with a
+      // pipeline), so a blank here is usually a gap rather than a deliberate choice.
+      const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'linux-x64', 'linux-i686', 'linux-aarch64',
+                              'osx-x64', 'osx-arm64', 'ios-arm64', 'tvos-arm64',
+                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
+                              'webos-armv7a'];
+
+      // Consoles and handhelds: fewer cores target them and the list is long enough
+      // to swamp the table, so they hide behind the "Show console targets" box.
+      const PLATFORMS_EXTRA = ['libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
+                               'emscripten', 'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
+                               'retrofw-mips32', 'rs90-odbeta-mips32'];
+
+      const PLATFORMS = PLATFORMS_MAIN.concat(PLATFORMS_EXTRA);
       // Platforms every core is expected to build. The rest (linux-aarch64,
       // android, win32) are opt-in per core, so a missing job there is not a
       // defect — but a *failing* job on any platform still is (see updateRowCells).
@@ -117,10 +151,29 @@
         'windows-x64': ['libretro-build-windows-x64', 'build-retroarch-windows-x64', 'windows-x64'],
         'windows-i686': ['libretro-build-windows-i686', 'build-retroarch-windows-i686', 'windows-i686', 'windows-x86'],
         'linux-x64': ['libretro-build-linux-x64', 'build-retroarch-linux-x64', 'linux-x64'],
+        'linux-i686': ['libretro-build-linux-i686', 'build-retroarch-linux-i686', 'linux-i686'],
         'linux-aarch64': ['libretro-build-linux-aarch64', 'build-retroarch-linux-aarch64', 'linux-aarch64', 'linux-arm64'],
         'android-arm64': ['android-arm64-v8a', 'android-arm64', 'build-retroarch-android-aarch64'],
         'android-x86_64': ['android-x86_64', 'android-x86-64'],
+        'android-armv7': ['android-armeabi-v7a', 'build-retroarch-android-armv7'],
         'android-x86': ['android-x86'],
+        'webos-armv7a': ['libretro-build-webos-armv7a', 'webos'],
+        // Console job names are matched with their full libretro-build- prefix on
+        // purpose: bare 'ctr' also lives inside 'spectrum', bare 'wii' inside 'wiiu'.
+        'libnx-aarch64': ['libretro-build-libnx-aarch64'],
+        'vita': ['libretro-build-vita'],
+        'wiiu': ['libretro-build-wiiu'],
+        'ctr': ['libretro-build-ctr'],
+        'wii': ['libretro-build-wii'],
+        'ngc': ['libretro-build-ngc'],
+        'psp': ['libretro-build-psp'],
+        'ps2': ['libretro-build-ps2'],
+        'emscripten': ['libretro-build-emscripten'],
+        'miyoo-arm32': ['libretro-build-miyoo-arm32'],
+        'dingux-mips32': ['libretro-build-dingux-mips32'],
+        'dingux-odbeta-mips32': ['libretro-build-dingux-odbeta-mips32'],
+        'retrofw-mips32': ['libretro-build-retrofw-mips32'],
+        'rs90-odbeta-mips32': ['libretro-build-rs90-odbeta-mips32'],
         'osx-x64': ['libretro-build-osx-x64', 'build-retroarch-osx-x64', 'build-retroarch-osx-universal-metal', 'build-retroarch-osx-opengl-x64', 'osx-x64'],
         'osx-arm64': ['libretro-build-osx-arm64', 'build-retroarch-osx-arm64', 'build-retroarch-osx-universal-metal', 'osx-arm64'],
         'ios-arm64': ['libretro-build-ios-arm64', 'build-retroarch-ios-arm64', 'ios-arm64'],
@@ -134,6 +187,8 @@
         'android-x86': ['android-x86_64', 'android-x86-64'],
         'windows-x64': ['msvc'],
         'windows-i686': ['msvc'],
+        'wii': ['wiiu'],
+        'dingux-mips32': ['odbeta'],
       };
 
       // When several jobs cover one platform (the osx universal build counts as
@@ -389,6 +444,7 @@
           const platformCells = [];
           for (const platform of PLATFORMS) {
             const cell = document.createElement('td');
+            if (PLATFORMS_EXTRA.includes(platform)) cell.dataset.extra = '';
             row.appendChild(cell);
             platformCells.push(cell);
           }
@@ -408,10 +464,13 @@
         localStorage.setItem('cores_hideOk', document.getElementById('hideOk').checked);
         localStorage.setItem('cores_hideUnknown', document.getElementById('hideUnknown').checked);
         localStorage.setItem('cores_onlyFailed', document.getElementById('onlyFailed').checked);
+        localStorage.setItem('cores_showExtra', document.getElementById('showExtra').checked);
         applyFilters();
       }
 
       function applyFilters() {
+        document.getElementById('cores-table').classList.toggle(
+          'hide-extra', !document.getElementById('showExtra').checked);
         const query = document.getElementById('filter').value.toLowerCase();
         const hideOk = document.getElementById('hideOk').checked;
         const hideUnknown = document.getElementById('hideUnknown').checked;
@@ -433,6 +492,7 @@
         document.getElementById('hideOk').checked = savedHideOk === 'true';
         document.getElementById('hideUnknown').checked = savedHideUnknown !== null ? savedHideUnknown === 'true' : true;
         document.getElementById('onlyFailed').checked = localStorage.getItem('cores_onlyFailed') === 'true';
+        document.getElementById('showExtra').checked = localStorage.getItem('cores_showExtra') === 'true';
         document.getElementById('filter').addEventListener('input', applyFilters);
         document.getElementById('token').value = getToken();
         document.getElementById('tokenstatus').textContent =

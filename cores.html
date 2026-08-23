@@ -13,6 +13,10 @@
       .y { color: #2a2; text-align: center; }
       .n { color: #c66; text-align: center; }
       .u { color: #ccc; text-align: center; }
+      .p { color: #c80; text-align: center; }
+      .m { color: #99a; text-align: center; }
+      #legend { margin: 10px 0; color: #666; font-size: 13px; }
+      #legend span { margin-right: 12px; white-space: nowrap; }
       .refresh-btn { cursor: pointer; background: none; border: none; color: #999; padding: 0 2px; font-size: 14px; }
       .refresh-btn:hover { color: #333; }
       #refresh-all { cursor: pointer; }
@@ -31,19 +35,32 @@
     <input type="text" id="filter" placeholder="Filter cores..." />
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
+    <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
+    <div id="legend">
+      <span class="y">✓ passed</span>
+      <span class="n">✗ failed</span>
+      <span class="p">◔ running/pending</span>
+      <span class="m">⏸ not run (manual/skipped/canceled)</span>
+      <span class="u">— no such job</span>
+      <span class="u">? no pipeline data</span>
+    </div>
     <table>
       <thead>
         <tr>
           <th>Core</th>
           <th>Pipeline</th>
           <th>win-x64</th>
+          <th>win-i686</th>
           <th>linux-x64</th>
+          <th>linux-aarch64</th>
           <th>osx-x64</th>
           <th>osx-arm64</th>
           <th>ios-arm64</th>
           <th>tvos-arm64</th>
           <th>android-arm64-v8a</th>
+          <th>android-x86_64</th>
+          <th>android-x86</th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>
@@ -53,8 +70,12 @@
       const GITLAB_URL = 'https://git.libretro.com';
       const GROUP = 'libretro';
       const PAGE_SIZE = 50;
-      const PLATFORMS = ['windows-x64', 'linux-x64', 'osx-x64', 'osx-arm64', 'ios-arm64', 'tvos-arm64', 'android-arm64'];
-      const PLATFORMS_REQUIRED = PLATFORMS.filter(p => p !== 'android-arm64');
+      const PLATFORMS = ['windows-x64', 'windows-i686', 'linux-x64', 'linux-aarch64', 'osx-x64', 'osx-arm64',
+                         'ios-arm64', 'tvos-arm64', 'android-arm64', 'android-x86_64', 'android-x86'];
+      // Platforms every core is expected to build. The rest (linux-aarch64,
+      // android, win32) are opt-in per core, so a missing job there is not a
+      // defect — but a *failing* job on any platform still is (see updateRowCells).
+      const PLATFORMS_REQUIRED = ['windows-x64', 'linux-x64', 'osx-x64', 'osx-arm64', 'ios-arm64', 'tvos-arm64'];
 
       // Projects to skip (superseded or deprecated)
       const SKIP_PROJECTS = ['flycast', 'uae4arm-libretro'];
@@ -83,41 +104,139 @@
         });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const json = await response.json();
-        if (json.errors) throw new Error(json.errors.map(e => e.message).join('; '));
+        // A heavy query can time out on individual fields ("Timeout on
+        // CiJob.status") while the rest of the page comes back fine. Only bail
+        // out when there is no usable data at all; otherwise render what we got.
+        if (json.errors && !json.data) throw new Error(json.errors.map(e => e.message).join('; '));
+        if (json.errors) console.warn('partial GraphQL errors:', json.errors.map(e => e.message));
         return json.data;
       }
 
       // Platform patterns to look for in job names
       const PLATFORM_JOB_PATTERNS = {
         'windows-x64': ['libretro-build-windows-x64', 'build-retroarch-windows-x64', 'windows-x64'],
+        'windows-i686': ['libretro-build-windows-i686', 'build-retroarch-windows-i686', 'windows-i686', 'windows-x86'],
         'linux-x64': ['libretro-build-linux-x64', 'build-retroarch-linux-x64', 'linux-x64'],
+        'linux-aarch64': ['libretro-build-linux-aarch64', 'build-retroarch-linux-aarch64', 'linux-aarch64', 'linux-arm64'],
         'android-arm64': ['android-arm64-v8a', 'android-arm64', 'build-retroarch-android-aarch64'],
+        'android-x86_64': ['android-x86_64', 'android-x86-64'],
+        'android-x86': ['android-x86'],
         'osx-x64': ['libretro-build-osx-x64', 'build-retroarch-osx-x64', 'build-retroarch-osx-universal-metal', 'build-retroarch-osx-opengl-x64', 'osx-x64'],
         'osx-arm64': ['libretro-build-osx-arm64', 'build-retroarch-osx-arm64', 'build-retroarch-osx-universal-metal', 'osx-arm64'],
         'ios-arm64': ['libretro-build-ios-arm64', 'build-retroarch-ios-arm64', 'ios-arm64'],
         'tvos-arm64': ['libretro-build-tvos-arm64', 'build-retroarch-tvos-arm64', 'tvos-arm64'],
       };
 
+      // Patterns that must NOT match, checked after PLATFORM_JOB_PATTERNS.
+      // Job matching is substring-based, so 'android-x86' would otherwise
+      // swallow the separate 'android-x86_64' job (and win-x64 the msvc ones).
+      const PLATFORM_JOB_EXCLUDES = {
+        'android-x86': ['android-x86_64', 'android-x86-64'],
+        'windows-x64': ['msvc'],
+        'windows-i686': ['msvc'],
+      };
+
+      // When several jobs cover one platform (the osx universal build counts as
+      // both osx-x64 and osx-arm64), the most alarming status wins, so a failure
+      // is never hidden behind a sibling success.
+      const JOB_STATUS_RANK = ['failed', 'canceled', 'running', 'pending', 'preparing',
+                               'waiting_for_resource', 'scheduled', 'created', 'manual',
+                               'skipped', 'success'];
+
+      // Cell rendering per job status. The point of the table is telling apart
+      // "this core has no job for that platform" (—) from "the job is there and
+      // it broke" (✗) — the two used to look identical.
+      const JOB_DISPLAY = {
+        success: { text: '✓', cls: 'y', label: 'passed' },
+        failed: { text: '✗', cls: 'n', label: 'failed' },
+        canceled: { text: '⏸', cls: 'm', label: 'canceled' },
+        skipped: { text: '⏸', cls: 'm', label: 'skipped' },
+        manual: { text: '⏸', cls: 'm', label: 'manual' },
+        running: { text: '◔', cls: 'p', label: 'running' },
+        pending: { text: '◔', cls: 'p', label: 'pending' },
+        preparing: { text: '◔', cls: 'p', label: 'preparing' },
+        created: { text: '◔', cls: 'p', label: 'created' },
+        scheduled: { text: '◔', cls: 'p', label: 'scheduled' },
+        waiting_for_resource: { text: '◔', cls: 'p', label: 'waiting for resource' },
+      };
+      const JOB_MISSING = { text: '—', cls: 'u', label: 'no such job' };
+      const JOB_NO_PIPELINE = { text: '?', cls: 'u', label: 'no pipeline data' };
+      const JOB_UNKNOWN = { text: '?', cls: 'u', label: 'unknown status' };
+
       // GraphQL fields fetched per project. We fetch several recent pipelines
       // (with their ref) plus the default branch name, then pick the latest
       // pipeline that actually ran on the default branch — otherwise a stray
       // dependabot/MR/feature-branch pipeline would masquerade as the core's
-      // status. Job names come from that pipeline, so platform availability
-      // reflects what actually built on the default branch (no need to fetch
-      // and parse .gitlab-ci.yml or resolve its includes).
+      // status. Job names *and their statuses* come from that pipeline, so each
+      // cell reflects what actually happened on the default branch (no need to
+      // fetch and parse .gitlab-ci.yml or resolve its includes).
+      // Note: asking for CiJob.webPath here makes the group query time out
+      // server-side ("Timeout on CiJob.name"), so there are no per-job links;
+      // the Pipeline column is the way into the build logs.
+      // GitLab caps any connection at 100 entries per page regardless of what
+      // `first:` asks for, so matrix-heavy cores (vice-libretro runs 154 jobs)
+      // need the cursor below — without it their jobs 101+ read as missing.
       const PROJECT_FIELDS = `
         name
         fullPath
         webUrl
         repository { rootRef }
         pipelines(first: 20) {
-          nodes { status ref jobs(first: 150) { nodes { name } } }
+          nodes {
+            iid
+            status
+            ref
+            jobs(first: 100) {
+              pageInfo { hasNextPage endCursor }
+              nodes { name status }
+            }
+          }
         }`;
 
       const STATUS_LABELS = {
         success: 'passed', failed: 'failed', running: 'running', pending: 'pending',
         canceled: 'canceled', created: 'created', skipped: 'skipped', manual: 'manual',
       };
+
+      // Most alarming of several job statuses (see JOB_STATUS_RANK).
+      function worstStatus(statuses) {
+        let worst = null;
+        for (const status of statuses) {
+          const rank = JOB_STATUS_RANK.indexOf(status);
+          if (worst === null) { worst = status; continue; }
+          const worstRank = JOB_STATUS_RANK.indexOf(worst);
+          if (rank !== -1 && (worstRank === -1 || rank < worstRank)) worst = status;
+        }
+        return worst;
+      }
+
+      function normalizeJobs(nodes) {
+        return (nodes || [])
+          .filter(job => job && job.name)
+          .map(job => ({ name: job.name.toLowerCase(), status: (job.status || '').toLowerCase() }))
+          .filter(job => !job.name.includes('dummy'));
+      }
+
+      // Per-platform verdict from a pipeline's job list.
+      function computePlatforms(jobs, hasPipeline) {
+        const platforms = {};
+        for (const platform of PLATFORMS) {
+          const patterns = PLATFORM_JOB_PATTERNS[platform] || [];
+          const excludes = PLATFORM_JOB_EXCLUDES[platform] || [];
+          const matched = jobs.filter(job =>
+            patterns.some(p => job.name.includes(p.toLowerCase())) &&
+            !excludes.some(x => job.name.includes(x.toLowerCase())));
+          // null status = the pipeline has no job at all for this platform,
+          // which is a different thing from a job that ran and failed. With no
+          // pipeline to look at we know neither, hence the third sentinel.
+          const missing = hasPipeline ? null : 'no_pipeline';
+          platforms[platform] = {
+            status: matched.length ? worstStatus(matched.map(j => j.status)) : missing,
+            jobs: matched.map(j => j.name),
+          };
+        }
+        return platforms;
+      }
 
       // Flatten a GraphQL project node into the shape the UI uses.
       function normalizeProject(node) {
@@ -127,35 +246,78 @@
         const nodes = node.pipelines.nodes;
         const pipeline = (defaultBranch && nodes.find(p => p.ref === defaultBranch))
           || nodes[0] || null;
-        const jobs = pipeline
-          ? pipeline.jobs.nodes.map(j => j.name.toLowerCase()).filter(j => !j.includes('dummy'))
-          : [];
-        const platforms = {};
-        for (const platform of PLATFORMS) {
-          const patterns = PLATFORM_JOB_PATTERNS[platform] || [];
-          platforms[platform] = jobs.some(job => patterns.some(p => job.includes(p.toLowerCase())));
-        }
+        const jobsConn = pipeline && pipeline.jobs ? pipeline.jobs : null;
+        const jobs = normalizeJobs(jobsConn ? jobsConn.nodes : []);
+        const truncated = !!(jobsConn && jobsConn.pageInfo && jobsConn.pageInfo.hasNextPage);
         return {
           name: node.name,
           slug: node.fullPath.split('/').pop().toLowerCase(),
           fullPath: node.fullPath,
           webUrl: node.webUrl,
           status: pipeline && pipeline.status ? pipeline.status.toLowerCase() : null,
-          platforms,
+          pipelineIid: pipeline ? pipeline.iid : null,
+          jobsCursor: truncated ? jobsConn.pageInfo.endCursor : null,
+          jobs,
+          platforms: computePlatforms(jobs, !!pipeline),
         };
+      }
+
+      // Page through the jobs that did not fit in the first 100, then redraw the
+      // row. Only the handful of matrix-heavy cores ever get here.
+      async function completeJobs(row) {
+        const project = row._project;
+        const query = `query($path: ID!, $iid: ID!, $cursor: String) {
+          project(fullPath: $path) {
+            pipeline(iid: $iid) {
+              jobs(first: 100, after: $cursor) {
+                pageInfo { hasNextPage endCursor }
+                nodes { name status }
+              }
+            }
+          }
+        }`;
+        try {
+          let cursor = project.jobsCursor;
+          while (cursor) {
+            const data = await gql(query,
+              { path: project.fullPath, iid: project.pipelineIid, cursor });
+            const conn = data.project && data.project.pipeline
+              ? data.project.pipeline.jobs : null;
+            if (!conn) break;
+            project.jobs = project.jobs.concat(normalizeJobs(conn.nodes));
+            cursor = conn.pageInfo.hasNextPage ? conn.pageInfo.endCursor : null;
+          }
+        } catch (e) {
+          // keep whatever the first page gave us
+        }
+        project.jobsCursor = null;
+        project.platforms = computePlatforms(project.jobs, true);
+        updateRowCells(row, project);
       }
 
       function updateRowCells(row, project) {
         const status = project.status;
         const isUnknown = !status || status === 'skipped' || status === 'manual';
         const isPassed = status === 'success';
-        let allAvailable = true;
+        let allOk = true;
+        let anyFailed = false;
         for (let i = 0; i < PLATFORMS.length; i++) {
-          const available = project.platforms[PLATFORMS[i]] || false;
-          if (!available && PLATFORMS_REQUIRED.includes(PLATFORMS[i])) allAvailable = false;
+          const platform = PLATFORMS[i];
+          const entry = project.platforms[platform] || { status: null, jobs: [] };
+          const display = entry.status === null ? JOB_MISSING
+            : entry.status === 'no_pipeline' ? JOB_NO_PIPELINE
+            : (JOB_DISPLAY[entry.status] || JOB_UNKNOWN);
+          // A required platform with no job is as bad as one that failed; an
+          // optional platform only counts against the row when it actually broke.
+          if (entry.status === 'failed') anyFailed = true;
+          if (entry.status !== 'success' &&
+              (PLATFORMS_REQUIRED.includes(platform) || entry.status === 'failed')) allOk = false;
           const cell = row._platformCells[i];
-          cell.textContent = available ? '✓' : (isUnknown ? '—' : '✗');
-          cell.className = available ? 'y' : (isUnknown ? 'u' : 'n');
+          cell.textContent = display.text;
+          cell.className = display.cls;
+          cell.title = entry.jobs.length
+            ? `${entry.jobs.join(', ')}: ${display.label}`
+            : `${platform}: ${display.label}`;
         }
 
         // Pipeline status as a colored text link (replaces the badge image).
@@ -165,8 +327,9 @@
         link.className = isPassed ? 'y' : (isUnknown ? 'u' : 'n');
 
         row._project = project;
-        row.dataset.ok = (isPassed && allAvailable) ? 'true' : 'false';
+        row.dataset.ok = (isPassed && allOk) ? 'true' : 'false';
         row.dataset.unknown = isUnknown ? 'true' : 'false';
+        row.dataset.failed = anyFailed ? 'true' : 'false';
         applyFilters();
       }
 
@@ -181,14 +344,21 @@
           const data = await gql(
             `query($path: ID!) { project(fullPath: $path) { ${PROJECT_FIELDS} } }`,
             { path: row._project.fullPath });
-          if (data.project) updateRowCells(row, normalizeProject(data.project));
+          if (data.project) {
+            const project = normalizeProject(data.project);
+            updateRowCells(row, project);
+            if (project.jobsCursor) await completeJobs(row);
+          }
         } catch (e) {
           // leave existing cells as-is
         }
       }
 
+      // Returns the rows whose job list was cut off at GitLab's 100-per-page
+      // limit, for the caller to finish loading.
       function appendProjects(projects) {
         const table = document.getElementById('cores');
+        const truncatedRows = [];
 
         for (const project of projects) {
           if (SKIP_PROJECTS.includes(project.name.toLowerCase()) || SKIP_PROJECTS.includes(project.slug)) continue;
@@ -228,12 +398,16 @@
           table.appendChild(row);
 
           updateRowCells(row, project);
+          if (project.jobsCursor) truncatedRows.push(row);
         }
+
+        return truncatedRows;
       }
 
       function saveAndApplyFilters() {
         localStorage.setItem('cores_hideOk', document.getElementById('hideOk').checked);
         localStorage.setItem('cores_hideUnknown', document.getElementById('hideUnknown').checked);
+        localStorage.setItem('cores_onlyFailed', document.getElementById('onlyFailed').checked);
         applyFilters();
       }
 
@@ -241,12 +415,14 @@
         const query = document.getElementById('filter').value.toLowerCase();
         const hideOk = document.getElementById('hideOk').checked;
         const hideUnknown = document.getElementById('hideUnknown').checked;
+        const onlyFailed = document.getElementById('onlyFailed').checked;
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
           const matchesQuery = row.dataset.name.includes(query);
           const isOk = row.dataset.ok === 'true';
           const isUnknown = row.dataset.unknown === 'true';
-          const hidden = (hideOk && isOk) || (hideUnknown && isUnknown);
+          const hasFailed = row.dataset.failed === 'true';
+          const hidden = (hideOk && isOk) || (hideUnknown && isUnknown) || (onlyFailed && !hasFailed);
           row.style.display = (matchesQuery && !hidden) ? '' : 'none';
         }
       }
@@ -256,6 +432,7 @@
         const savedHideUnknown = localStorage.getItem('cores_hideUnknown');
         document.getElementById('hideOk').checked = savedHideOk === 'true';
         document.getElementById('hideUnknown').checked = savedHideUnknown !== null ? savedHideUnknown === 'true' : true;
+        document.getElementById('onlyFailed').checked = localStorage.getItem('cores_onlyFailed') === 'true';
         document.getElementById('filter').addEventListener('input', applyFilters);
         document.getElementById('token').value = getToken();
         document.getElementById('tokenstatus').textContent =
@@ -281,9 +458,10 @@
           while (true) {
             const data = await gql(query, { cursor });
             const conn = data.group.projects;
-            appendProjects(conn.nodes.map(normalizeProject));
+            const truncatedRows = appendProjects(conn.nodes.map(normalizeProject));
             loaded += conn.nodes.length;
             status.textContent = `Loading... (${loaded})`;
+            for (const row of truncatedRows) await completeJobs(row);
             if (!conn.pageInfo.hasNextPage) break;
             cursor = conn.pageInfo.endCursor;
           }

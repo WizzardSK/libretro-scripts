@@ -108,12 +108,10 @@
       const PAGE_SIZE = 50;
       // Desktop/mobile targets, always shown. Roughly the platforms most cores in
       // the group actually build, so a blank here is usually a gap rather than a
-      // deliberate choice. Android is the exception: only ppsspp and rom-cleaner
-      // declare android jobs in GitLab CI (checked across all 219 group projects),
-      // because the buildbot builds Android from the libretro-super recipes
-      // instead. Those columns stay in the default view because Android is a
-      // target worth watching - but an empty cell there means "not built here",
-      // not "the build broke".
+      // deliberate choice. Note that the Android jobs are named without the
+      // libretro-build- prefix the other platforms use (plain 'android-arm64-v8a'
+      // and friends, extending .libretro-android-jni-*), which is why the
+      // patterns below match them bare.
       const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'windows-msvc-x64', 'windows-msvc-i686',
                               'linux-x64', 'linux-i686', 'linux-aarch64',
                               'osx-x64', 'osx-arm64', 'osx-ppc', 'osx-x86',

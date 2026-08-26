@@ -46,7 +46,7 @@
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
-    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console targets</label>
+    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console, Android &amp; legacy targets</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
       <span class="y">✓ passed</span>
@@ -69,12 +69,13 @@
           <th class="plat"><span class="hp">osx</span><span class="ha">x64</span></th>
           <th class="plat"><span class="hp">osx</span><span class="ha">arm64</span></th>
           <th class="plat"><span class="hp">ios</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">ios9</span><span class="ha"></span></th>
           <th class="plat"><span class="hp">tvos</span><span class="ha">arm64</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">x86_64</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">x86</span></th>
           <th class="plat"><span class="hp">webos</span><span class="ha">armv7a</span></th>
+          <th class="plat" data-extra><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
+          <th class="plat" data-extra><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
+          <th class="plat" data-extra><span class="hp">android</span><span class="ha">x86_64</span></th>
+          <th class="plat" data-extra><span class="hp">android</span><span class="ha">x86</span></th>
           <th class="plat" data-extra><span class="hp">switch</span><span class="ha">aarch64</span></th>
           <th class="plat" data-extra><span class="hp">vita</span><span class="ha"></span></th>
           <th class="plat" data-extra><span class="hp">wiiu</span><span class="ha"></span></th>
@@ -89,6 +90,13 @@
           <th class="plat" data-extra><span class="hp">dingux-ob</span><span class="ha">mips32</span></th>
           <th class="plat" data-extra><span class="hp">retrofw</span><span class="ha">mips32</span></th>
           <th class="plat" data-extra><span class="hp">rs90</span><span class="ha">mips32</span></th>
+          <th class="plat" data-extra><span class="hp">win-msvc</span><span class="ha">x64</span></th>
+          <th class="plat" data-extra><span class="hp">win-msvc</span><span class="ha">i686</span></th>
+          <th class="plat" data-extra><span class="hp">ps3</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">osx</span><span class="ha">ppc</span></th>
+          <th class="plat" data-extra><span class="hp">osx</span><span class="ha">x86</span></th>
+          <th class="plat" data-extra><span class="hp">dos</span><span class="ha">i586</span></th>
+          <th class="plat" data-extra><span class="hp">ps4</span><span class="ha"></span></th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>
@@ -99,18 +107,23 @@
       const GROUP = 'libretro';
       const PAGE_SIZE = 50;
       // Desktop/mobile targets, always shown. Roughly the platforms most cores in
-      // the group actually build (each of these is on 165+ of the 207 cores with a
-      // pipeline), so a blank here is usually a gap rather than a deliberate choice.
+      // the group actually build, so a blank here is usually a gap rather than a
+      // deliberate choice. Android is NOT among them: only ppsspp and rom-cleaner
+      // declare android jobs in GitLab CI (checked across all 219 group projects),
+      // because the buildbot builds Android from the libretro-super recipes
+      // instead - which is why those columns sit with the opt-in ones below.
       const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'linux-x64', 'linux-i686', 'linux-aarch64',
-                              'osx-x64', 'osx-arm64', 'ios-arm64', 'tvos-arm64',
-                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
+                              'osx-x64', 'osx-arm64', 'ios-arm64', 'ios9', 'tvos-arm64',
                               'webos-armv7a'];
 
-      // Consoles and handhelds: fewer cores target them and the list is long enough
-      // to swamp the table, so they hide behind the "Show console targets" box.
-      const PLATFORMS_EXTRA = ['libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
+      // Consoles, Android, and legacy toolchains: fewer cores target them and the
+      // list is long enough to swamp the table, so they hide behind the checkbox.
+      const PLATFORMS_EXTRA = ['android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
+                               'libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
                                'emscripten', 'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
-                               'retrofw-mips32', 'rs90-odbeta-mips32'];
+                               'retrofw-mips32', 'rs90-odbeta-mips32',
+                               'windows-msvc-x64', 'windows-msvc-i686', 'psl1ght', 'osx-ppc',
+                               'osx-x86', 'djgpp-i586', 'orbis'];
 
       const PLATFORMS = PLATFORMS_MAIN.concat(PLATFORMS_EXTRA);
       // Platforms every core is expected to build. The rest (linux-aarch64,
@@ -158,7 +171,7 @@
         'windows-x64': ['libretro-build-windows-x64', 'build-retroarch-windows-x64', 'windows-x64'],
         'windows-i686': ['libretro-build-windows-i686', 'build-retroarch-windows-i686', 'windows-i686', 'windows-x86'],
         'linux-x64': ['libretro-build-linux-x64', 'build-retroarch-linux-x64', 'linux-x64'],
-        'linux-i686': ['libretro-build-linux-i686', 'build-retroarch-linux-i686', 'linux-i686'],
+        'linux-i686': ['libretro-build-linux-i686', 'build-retroarch-linux-i686', 'linux-i686', 'linux-x86'],
         'linux-aarch64': ['libretro-build-linux-aarch64', 'build-retroarch-linux-aarch64', 'linux-aarch64', 'linux-arm64'],
         'android-arm64': ['android-arm64-v8a', 'android-arm64', 'build-retroarch-android-aarch64'],
         'android-x86_64': ['android-x86_64', 'android-x86-64'],
@@ -185,6 +198,18 @@
         'osx-arm64': ['libretro-build-osx-arm64', 'build-retroarch-osx-arm64', 'build-retroarch-osx-universal-metal', 'osx-arm64'],
         'ios-arm64': ['libretro-build-ios-arm64', 'build-retroarch-ios-arm64', 'ios-arm64'],
         'tvos-arm64': ['libretro-build-tvos-arm64', 'build-retroarch-tvos-arm64', 'tvos-arm64'],
+        // Legacy iOS. 129 of the 180 cores with CI jobs build it - more than
+        // switch or vita - and no other pattern here matches it.
+        'ios9': ['libretro-build-ios9'],
+        // One column per word size rather than per MSVC version, so msvc05,
+        // msvc10 and msvc19 all land in the same place.
+        'windows-msvc-x64': ['libretro-build-windows-msvc'],
+        'windows-msvc-i686': ['libretro-build-windows-msvc'],
+        'psl1ght': ['libretro-build-psl1ght'],
+        'osx-ppc': ['libretro-build-osx-ppc'],
+        'osx-x86': ['libretro-build-osx-x86'],
+        'djgpp-i586': ['libretro-build-djgpp'],
+        'orbis': ['libretro-build-orbis'],
       };
 
       // Patterns that must NOT match, checked after PLATFORM_JOB_PATTERNS.
@@ -196,6 +221,9 @@
         'windows-i686': ['msvc'],
         'wii': ['wiiu'],
         'dingux-mips32': ['odbeta'],
+        'linux-i686': ['x86_64', 'x86-64'],
+        'windows-msvc-x64': ['i686'],
+        'windows-msvc-i686': ['x64'],
       };
 
       // When several jobs cover one platform (the osx universal build counts as

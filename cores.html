@@ -46,7 +46,7 @@
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
-    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console, Android &amp; legacy targets</label>
+    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console &amp; legacy targets</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
       <span class="y">✓ passed</span>
@@ -63,19 +63,23 @@
           <th>Pipeline</th>
           <th class="plat"><span class="hp">win</span><span class="ha">x64</span></th>
           <th class="plat"><span class="hp">win</span><span class="ha">i686</span></th>
+          <th class="plat"><span class="hp">win-msvc</span><span class="ha">x64</span></th>
+          <th class="plat"><span class="hp">win-msvc</span><span class="ha">i686</span></th>
           <th class="plat"><span class="hp">linux</span><span class="ha">x64</span></th>
           <th class="plat"><span class="hp">linux</span><span class="ha">i686</span></th>
           <th class="plat"><span class="hp">linux</span><span class="ha">aarch64</span></th>
           <th class="plat"><span class="hp">osx</span><span class="ha">x64</span></th>
           <th class="plat"><span class="hp">osx</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">osx</span><span class="ha">ppc</span></th>
+          <th class="plat"><span class="hp">osx</span><span class="ha">x86</span></th>
           <th class="plat"><span class="hp">ios</span><span class="ha">arm64</span></th>
           <th class="plat"><span class="hp">ios9</span><span class="ha"></span></th>
           <th class="plat"><span class="hp">tvos</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">x86_64</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">x86</span></th>
           <th class="plat"><span class="hp">webos</span><span class="ha">armv7a</span></th>
-          <th class="plat" data-extra><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
-          <th class="plat" data-extra><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
-          <th class="plat" data-extra><span class="hp">android</span><span class="ha">x86_64</span></th>
-          <th class="plat" data-extra><span class="hp">android</span><span class="ha">x86</span></th>
           <th class="plat" data-extra><span class="hp">switch</span><span class="ha">aarch64</span></th>
           <th class="plat" data-extra><span class="hp">vita</span><span class="ha"></span></th>
           <th class="plat" data-extra><span class="hp">wiiu</span><span class="ha"></span></th>
@@ -90,11 +94,7 @@
           <th class="plat" data-extra><span class="hp">dingux-ob</span><span class="ha">mips32</span></th>
           <th class="plat" data-extra><span class="hp">retrofw</span><span class="ha">mips32</span></th>
           <th class="plat" data-extra><span class="hp">rs90</span><span class="ha">mips32</span></th>
-          <th class="plat" data-extra><span class="hp">win-msvc</span><span class="ha">x64</span></th>
-          <th class="plat" data-extra><span class="hp">win-msvc</span><span class="ha">i686</span></th>
           <th class="plat" data-extra><span class="hp">ps3</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">osx</span><span class="ha">ppc</span></th>
-          <th class="plat" data-extra><span class="hp">osx</span><span class="ha">x86</span></th>
           <th class="plat" data-extra><span class="hp">dos</span><span class="ha">i586</span></th>
           <th class="plat" data-extra><span class="hp">ps4</span><span class="ha"></span></th>
         </tr>
@@ -108,22 +108,25 @@
       const PAGE_SIZE = 50;
       // Desktop/mobile targets, always shown. Roughly the platforms most cores in
       // the group actually build, so a blank here is usually a gap rather than a
-      // deliberate choice. Android is NOT among them: only ppsspp and rom-cleaner
+      // deliberate choice. Android is the exception: only ppsspp and rom-cleaner
       // declare android jobs in GitLab CI (checked across all 219 group projects),
       // because the buildbot builds Android from the libretro-super recipes
-      // instead - which is why those columns sit with the opt-in ones below.
-      const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'linux-x64', 'linux-i686', 'linux-aarch64',
-                              'osx-x64', 'osx-arm64', 'ios-arm64', 'ios9', 'tvos-arm64',
+      // instead. Those columns stay in the default view because Android is a
+      // target worth watching - but an empty cell there means "not built here",
+      // not "the build broke".
+      const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'windows-msvc-x64', 'windows-msvc-i686',
+                              'linux-x64', 'linux-i686', 'linux-aarch64',
+                              'osx-x64', 'osx-arm64', 'osx-ppc', 'osx-x86',
+                              'ios-arm64', 'ios9', 'tvos-arm64',
+                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
                               'webos-armv7a'];
 
-      // Consoles, Android, and legacy toolchains: fewer cores target them and the
-      // list is long enough to swamp the table, so they hide behind the checkbox.
-      const PLATFORMS_EXTRA = ['android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
-                               'libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
+      // Consoles and legacy toolchains: fewer cores target them and the list is
+      // long enough to swamp the table, so they hide behind the checkbox.
+      const PLATFORMS_EXTRA = ['libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
                                'emscripten', 'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
                                'retrofw-mips32', 'rs90-odbeta-mips32',
-                               'windows-msvc-x64', 'windows-msvc-i686', 'psl1ght', 'osx-ppc',
-                               'osx-x86', 'djgpp-i586', 'orbis'];
+                               'psl1ght', 'djgpp-i586', 'orbis'];
 
       const PLATFORMS = PLATFORMS_MAIN.concat(PLATFORMS_EXTRA);
       // Platforms every core is expected to build. The rest (linux-aarch64,

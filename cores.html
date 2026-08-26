@@ -25,6 +25,13 @@
       /* Console columns are marked on the cells themselves rather than by index,
          since the status classes above rewrite className on every refresh. */
       table.hide-extra [data-extra] { display: none; }
+      /* Platform headers are two lines: the platform, then the architecture.
+         Not .p/.a — .p is already the running/pending status colour above. */
+      th.plat { text-align: center; font-weight: normal; }
+      th.plat .hp { display: block; font-weight: bold; }
+      /* min-height keeps single-arch consoles the same height as the rest */
+      th.plat .ha { display: block; font-family: monospace; font-size: 11px;
+                    color: #888; min-height: 1.3em; }
     </style>
   </head>
   <body>
@@ -54,34 +61,34 @@
         <tr>
           <th>Core</th>
           <th>Pipeline</th>
-          <th>win-x64</th>
-          <th>win-i686</th>
-          <th>linux-x64</th>
-          <th>linux-i686</th>
-          <th>linux-aarch64</th>
-          <th>osx-x64</th>
-          <th>osx-arm64</th>
-          <th>ios-arm64</th>
-          <th>tvos-arm64</th>
-          <th>android-arm64-v8a</th>
-          <th>android-v7a</th>
-          <th>android-x86_64</th>
-          <th>android-x86</th>
-          <th>webos</th>
-          <th data-extra>switch</th>
-          <th data-extra>vita</th>
-          <th data-extra>wiiu</th>
-          <th data-extra>3ds</th>
-          <th data-extra>wii</th>
-          <th data-extra>ngc</th>
-          <th data-extra>psp</th>
-          <th data-extra>ps2</th>
-          <th data-extra>wasm</th>
-          <th data-extra>miyoo</th>
-          <th data-extra>dingux</th>
-          <th data-extra>dingux-ob</th>
-          <th data-extra>retrofw</th>
-          <th data-extra>rs90</th>
+          <th class="plat"><span class="hp">win</span><span class="ha">x64</span></th>
+          <th class="plat"><span class="hp">win</span><span class="ha">i686</span></th>
+          <th class="plat"><span class="hp">linux</span><span class="ha">x64</span></th>
+          <th class="plat"><span class="hp">linux</span><span class="ha">i686</span></th>
+          <th class="plat"><span class="hp">linux</span><span class="ha">aarch64</span></th>
+          <th class="plat"><span class="hp">osx</span><span class="ha">x64</span></th>
+          <th class="plat"><span class="hp">osx</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">ios</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">tvos</span><span class="ha">arm64</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">x86_64</span></th>
+          <th class="plat"><span class="hp">android</span><span class="ha">x86</span></th>
+          <th class="plat"><span class="hp">webos</span><span class="ha">armv7a</span></th>
+          <th class="plat" data-extra><span class="hp">switch</span><span class="ha">aarch64</span></th>
+          <th class="plat" data-extra><span class="hp">vita</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">wiiu</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">3ds</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">wii</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">ngc</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">psp</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">ps2</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">wasm</span><span class="ha"></span></th>
+          <th class="plat" data-extra><span class="hp">miyoo</span><span class="ha">arm32</span></th>
+          <th class="plat" data-extra><span class="hp">dingux</span><span class="ha">mips32</span></th>
+          <th class="plat" data-extra><span class="hp">dingux-ob</span><span class="ha">mips32</span></th>
+          <th class="plat" data-extra><span class="hp">retrofw</span><span class="ha">mips32</span></th>
+          <th class="plat" data-extra><span class="hp">rs90</span><span class="ha">mips32</span></th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>

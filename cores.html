@@ -32,7 +32,12 @@
          per architecture it is built for, so the four Windows variants sit under
          a single "win" rather than repeating it. */
       th.grp { text-align: center; font-weight: bold; border-bottom: 1px solid #ddd; }
-      th.grp + th.grp { border-left: 1px solid #ddd; }
+      /* Marks the first column of each group, in the header and in every row, so
+         the divider runs down the table instead of stopping under the heading.
+         An attribute rather than a class: the status classes rewrite className
+         on every refresh, the same reason the console columns are marked this
+         way. */
+      [data-gstart] { border-left: 1px solid #ddd; }
       /* min-height keeps arch-less consoles the same height as the rest */
       th.plat { text-align: center; font-weight: normal; font-family: monospace;
                 font-size: 11px; color: #888; min-height: 1.3em; }
@@ -67,67 +72,54 @@
           <th rowspan="2">Core</th>
           <th rowspan="2">Pipeline</th>
           <th class="grp" colspan="4">win</th>
-          <th class="grp" colspan="3">linux</th>
-          <th class="grp" colspan="3">osx</th>
-          <th class="grp" colspan="1">ios</th>
-          <th class="grp" colspan="1">ios9</th>
-          <th class="grp" colspan="1">tvos</th>
-          <th class="grp" colspan="4">android</th>
-          <th class="grp" colspan="1">webos</th>
-          <th class="grp" data-extra colspan="1">switch</th>
-          <th class="grp" data-extra colspan="1">vita</th>
-          <th class="grp" data-extra colspan="1">wiiu</th>
-          <th class="grp" data-extra colspan="1">3ds</th>
-          <th class="grp" data-extra colspan="1">wii</th>
-          <th class="grp" data-extra colspan="1">ngc</th>
-          <th class="grp" data-extra colspan="1">psp</th>
-          <th class="grp" data-extra colspan="1">ps2</th>
-          <th class="grp" data-extra colspan="1">wasm</th>
-          <th class="grp" data-extra colspan="1">miyoo</th>
-          <th class="grp" data-extra colspan="1">dingux</th>
-          <th class="grp" data-extra colspan="1">dingux-ob</th>
-          <th class="grp" data-extra colspan="1">retrofw</th>
-          <th class="grp" data-extra colspan="1">rs90</th>
-          <th class="grp" data-extra colspan="1">ps3</th>
-          <th class="grp" data-extra colspan="1">dos</th>
-          <th class="grp" data-extra colspan="1">ps4</th>
+          <th class="grp" data-gstart colspan="3">linux</th>
+          <th class="grp" data-gstart colspan="3">osx</th>
+          <th class="grp" data-gstart colspan="1">ios</th>
+          <th class="grp" data-gstart colspan="1">ios9</th>
+          <th class="grp" data-gstart colspan="1">tvos</th>
+          <th class="grp" data-gstart colspan="4">android</th>
+          <th class="grp" data-gstart colspan="1">webos</th>
+          <th class="grp" data-gstart data-extra colspan="5">Nintendo</th>
+          <th class="grp" data-gstart data-extra colspan="5">Sony</th>
+          <th class="grp" data-gstart data-extra colspan="5">handhelds</th>
+          <th class="grp" data-gstart data-extra colspan="2">other</th>
         </tr>
         <tr>
           <th class="plat">x64</th>
           <th class="plat" title="i686">x86</th>
           <th class="plat" title="MSVC x64">msvc64</th>
           <th class="plat" title="MSVC i686">msvc32</th>
-          <th class="plat">x64</th>
+          <th class="plat" data-gstart>x64</th>
           <th class="plat" title="i686">x86</th>
           <th class="plat" title="aarch64">arm64</th>
-          <th class="plat">x64</th>
+          <th class="plat" data-gstart>x64</th>
           <th class="plat">arm64</th>
           <th class="plat">x86</th>
-          <th class="plat">arm64</th>
-          <th class="plat"></th>
-          <th class="plat">arm64</th>
-          <th class="plat" title="arm64-v8a">arm64</th>
+          <th class="plat" data-gstart>arm64</th>
+          <th class="plat" data-gstart></th>
+          <th class="plat" data-gstart>arm64</th>
+          <th class="plat" data-gstart title="arm64-v8a">arm64</th>
           <th class="plat" title="armeabi-v7a">armv7</th>
           <th class="plat" title="x86_64">x64</th>
           <th class="plat">x86</th>
-          <th class="plat" title="armv7a">armv7</th>
-          <th class="plat" data-extra title="aarch64">arm64</th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra>arm32</th>
-          <th class="plat" data-extra title="mips32">mips</th>
-          <th class="plat" data-extra title="mips32">mips</th>
-          <th class="plat" data-extra title="mips32">mips</th>
-          <th class="plat" data-extra title="mips32">mips</th>
-          <th class="plat" data-extra></th>
-          <th class="plat" data-extra>i586</th>
-          <th class="plat" data-extra></th>
+          <th class="plat" data-gstart title="armv7a">armv7</th>
+          <th class="plat" data-gstart data-extra title="aarch64">switch</th>
+          <th class="plat" data-extra>wiiu</th>
+          <th class="plat" data-extra>3ds</th>
+          <th class="plat" data-extra>wii</th>
+          <th class="plat" data-extra>ngc</th>
+          <th class="plat" data-gstart data-extra>vita</th>
+          <th class="plat" data-extra>psp</th>
+          <th class="plat" data-extra>ps2</th>
+          <th class="plat" data-extra>ps3</th>
+          <th class="plat" data-extra>ps4</th>
+          <th class="plat" data-gstart data-extra title="arm32">miyoo</th>
+          <th class="plat" data-extra title="mips32">dingux</th>
+          <th class="plat" data-extra title="mips32">dingux-ob</th>
+          <th class="plat" data-extra title="mips32">retrofw</th>
+          <th class="plat" data-extra title="mips32">rs90</th>
+          <th class="plat" data-gstart data-extra>wasm</th>
+          <th class="plat" data-extra title="i586">dos</th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>
@@ -152,12 +144,17 @@
 
       // Consoles and legacy toolchains: fewer cores target them and the list is
       // long enough to swamp the table, so they hide behind the checkbox.
-      const PLATFORMS_EXTRA = ['libnx-aarch64', 'vita', 'wiiu', 'ctr', 'wii', 'ngc', 'psp', 'ps2',
-                               'emscripten', 'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
+      const PLATFORMS_EXTRA = ['libnx-aarch64', 'wiiu', 'ctr', 'wii', 'ngc',
+                               'vita', 'psp', 'ps2', 'psl1ght', 'orbis',
+                               'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
                                'retrofw-mips32', 'rs90-odbeta-mips32',
-                               'psl1ght', 'djgpp-i586', 'orbis'];
+                               'emscripten', 'djgpp-i586'];
 
       const PLATFORMS = PLATFORMS_MAIN.concat(PLATFORMS_EXTRA);
+
+      // First column of each header group, so the divider between groups is
+      // drawn on the body cells too and not only under the heading.
+      const GROUP_STARTS = new Set(['linux-x64', 'osx-x64', 'ios-arm64', 'ios9', 'tvos-arm64', 'android-arm64', 'webos-armv7a', 'libnx-aarch64', 'vita', 'miyoo-arm32', 'emscripten']);
       // Platforms every core is expected to build. The rest (linux-aarch64,
       // android, win32) are opt-in per core, so a missing job there is not a
       // defect — but a *failing* job on any platform still is (see updateRowCells).
@@ -534,6 +531,7 @@
           for (const platform of PLATFORMS) {
             const cell = document.createElement('td');
             if (PLATFORMS_EXTRA.includes(platform)) cell.dataset.extra = '';
+            if (GROUP_STARTS.has(platform)) cell.dataset.gstart = '';
             row.appendChild(cell);
             platformCells.push(cell);
           }

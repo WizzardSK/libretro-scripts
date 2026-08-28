@@ -13,7 +13,10 @@
       .y { color: #2a2; text-align: center; }
       .n { color: #c66; text-align: center; }
       .u { color: #ccc; text-align: center; }
-      .p { color: #c80; text-align: center; }
+      /* Running and queued were one class: both amber circles, so a job that had
+         actually started looked the same as one still sitting in the queue. */
+      .r { color: #38c; text-align: center; }
+      .q { color: #c80; text-align: center; }
       .m { color: #99a; text-align: center; }
       #legend { margin: 10px 0; color: #666; font-size: 13px; }
       #legend span { margin-right: 12px; white-space: nowrap; }
@@ -27,8 +30,7 @@
       table.hide-extra [data-extra] { display: none; }
       /* Platform headers span two rows: the platform name once, above one cell
          per architecture it is built for, so the four Windows variants sit under
-         a single "win" rather than repeating it. Not .p/.a — .p is already the
-         running/pending status colour above. */
+         a single "win" rather than repeating it. */
       th.grp { text-align: center; font-weight: bold; border-bottom: 1px solid #ddd; }
       th.grp + th.grp { border-left: 1px solid #ddd; }
       /* min-height keeps arch-less consoles the same height as the rest */
@@ -53,7 +55,8 @@
     <div id="legend">
       <span class="y">✓ passed</span>
       <span class="n">✗ failed</span>
-      <span class="p">◔ running/pending</span>
+      <span class="r">◔ running</span>
+      <span class="q">○ queued</span>
       <span class="m">⏸ not run (manual/skipped/canceled)</span>
       <span class="u">— no such job</span>
       <span class="u">? no pipeline data</span>
@@ -270,12 +273,15 @@
         canceled: { text: '⏸', cls: 'm', label: 'canceled' },
         skipped: { text: '⏸', cls: 'm', label: 'skipped' },
         manual: { text: '⏸', cls: 'm', label: 'manual' },
-        running: { text: '◔', cls: 'p', label: 'running' },
-        pending: { text: '◔', cls: 'p', label: 'pending' },
-        preparing: { text: '◔', cls: 'p', label: 'preparing' },
-        created: { text: '◔', cls: 'p', label: 'created' },
-        scheduled: { text: '◔', cls: 'p', label: 'scheduled' },
-        waiting_for_resource: { text: '◔', cls: 'p', label: 'waiting for resource' },
+        // Started vs still queued. GitLab counts preparing as under way (the
+        // runner has taken the job); created, scheduled and waiting_for_resource
+        // are all forms of waiting for one.
+        running: { text: '◔', cls: 'r', label: 'running' },
+        preparing: { text: '◔', cls: 'r', label: 'preparing' },
+        pending: { text: '○', cls: 'q', label: 'pending' },
+        created: { text: '○', cls: 'q', label: 'created' },
+        scheduled: { text: '○', cls: 'q', label: 'scheduled' },
+        waiting_for_resource: { text: '○', cls: 'q', label: 'waiting for resource' },
       };
       const JOB_MISSING = { text: '—', cls: 'u', label: 'no such job' };
       const JOB_NO_PIPELINE = { text: '?', cls: 'u', label: 'no pipeline data' };
@@ -472,6 +478,20 @@
         }
       }
 
+      // Nearly every project in the group is <thing>-libretro or libretro-<thing>.
+      // In a table that is nothing but libretro cores the word says nothing and
+      // only widens the first column, so drop it - as a whole word, with the
+      // separator it brought along, at either end. Never down to nothing: a
+      // project actually called "libretro" keeps its name, and the full name
+      // stays as the cell's tooltip.
+      function displayName(name) {
+        const stripped = name
+          .replace(/[-_ ]libretro\b/gi, '')
+          .replace(/\blibretro[-_ ]/gi, '')
+          .trim();
+        return stripped || name;
+      }
+
       // Returns the rows whose job list was cut off at GitLab's 100-per-page
       // limit, for the caller to finish loading.
       function appendProjects(projects) {
@@ -482,11 +502,17 @@
           if (SKIP_PROJECTS.includes(project.name.toLowerCase()) || SKIP_PROJECTS.includes(project.slug)) continue;
 
           const row = document.createElement('tr');
-          row.dataset.name = project.name.toLowerCase();
+          const shown = displayName(project.name);
+          row.dataset.name = shown.toLowerCase();
+          // The filter still searches what was dropped, so typing "libretro" or
+          // the project's path finds the row even though neither is on screen.
+          row.dataset.search =
+            `${shown} ${project.name} ${project.fullPath || ''}`.toLowerCase();
 
           // Name cell
           const nameCell = document.createElement('td');
-          nameCell.textContent = project.name;
+          nameCell.textContent = shown;
+          nameCell.title = project.name;
           const refreshBtn = document.createElement('button');
           refreshBtn.className = 'refresh-btn';
           refreshBtn.textContent = ' ↻';
@@ -552,7 +578,7 @@
         const onlyFailed = document.getElementById('onlyFailed').checked;
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
-          const matchesQuery = row.dataset.name.includes(query);
+          const matchesQuery = row.dataset.search.includes(query);
           const isOk = row.dataset.ok === 'true';
           const isUnknown = row.dataset.unknown === 'true';
           const hasFailed = row.dataset.failed === 'true';

@@ -25,13 +25,15 @@
       /* Console columns are marked on the cells themselves rather than by index,
          since the status classes above rewrite className on every refresh. */
       table.hide-extra [data-extra] { display: none; }
-      /* Platform headers are two lines: the platform, then the architecture.
-         Not .p/.a — .p is already the running/pending status colour above. */
-      th.plat { text-align: center; font-weight: normal; }
-      th.plat .hp { display: block; font-weight: bold; }
-      /* min-height keeps single-arch consoles the same height as the rest */
-      th.plat .ha { display: block; font-family: monospace; font-size: 11px;
-                    color: #888; min-height: 1.3em; }
+      /* Platform headers span two rows: the platform name once, above one cell
+         per architecture it is built for, so the four Windows variants sit under
+         a single "win" rather than repeating it. Not .p/.a — .p is already the
+         running/pending status colour above. */
+      th.grp { text-align: center; font-weight: bold; border-bottom: 1px solid #ddd; }
+      th.grp + th.grp { border-left: 1px solid #ddd; }
+      /* min-height keeps arch-less consoles the same height as the rest */
+      th.plat { text-align: center; font-weight: normal; font-family: monospace;
+                font-size: 11px; color: #888; min-height: 1.3em; }
     </style>
   </head>
   <body>
@@ -59,43 +61,70 @@
     <table id="cores-table" class="hide-extra">
       <thead>
         <tr>
-          <th>Core</th>
-          <th>Pipeline</th>
-          <th class="plat"><span class="hp">win</span><span class="ha">x64</span></th>
-          <th class="plat"><span class="hp">win</span><span class="ha">i686</span></th>
-          <th class="plat"><span class="hp">win-msvc</span><span class="ha">x64</span></th>
-          <th class="plat"><span class="hp">win-msvc</span><span class="ha">i686</span></th>
-          <th class="plat"><span class="hp">linux</span><span class="ha">x64</span></th>
-          <th class="plat"><span class="hp">linux</span><span class="ha">i686</span></th>
-          <th class="plat"><span class="hp">linux</span><span class="ha">aarch64</span></th>
-          <th class="plat"><span class="hp">osx</span><span class="ha">x64</span></th>
-          <th class="plat"><span class="hp">osx</span><span class="ha">arm64</span></th>
-          <th class="plat"><span class="hp">osx</span><span class="ha">x86</span></th>
-          <th class="plat"><span class="hp">ios</span><span class="ha">arm64</span></th>
-          <th class="plat"><span class="hp">ios9</span><span class="ha"></span></th>
-          <th class="plat"><span class="hp">tvos</span><span class="ha">arm64</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">arm64-v8a</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">armeabi-v7a</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">x86_64</span></th>
-          <th class="plat"><span class="hp">android</span><span class="ha">x86</span></th>
-          <th class="plat"><span class="hp">webos</span><span class="ha">armv7a</span></th>
-          <th class="plat" data-extra><span class="hp">switch</span><span class="ha">aarch64</span></th>
-          <th class="plat" data-extra><span class="hp">vita</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">wiiu</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">3ds</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">wii</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">ngc</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">psp</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">ps2</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">wasm</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">miyoo</span><span class="ha">arm32</span></th>
-          <th class="plat" data-extra><span class="hp">dingux</span><span class="ha">mips32</span></th>
-          <th class="plat" data-extra><span class="hp">dingux-ob</span><span class="ha">mips32</span></th>
-          <th class="plat" data-extra><span class="hp">retrofw</span><span class="ha">mips32</span></th>
-          <th class="plat" data-extra><span class="hp">rs90</span><span class="ha">mips32</span></th>
-          <th class="plat" data-extra><span class="hp">ps3</span><span class="ha"></span></th>
-          <th class="plat" data-extra><span class="hp">dos</span><span class="ha">i586</span></th>
-          <th class="plat" data-extra><span class="hp">ps4</span><span class="ha"></span></th>
+          <th rowspan="2">Core</th>
+          <th rowspan="2">Pipeline</th>
+          <th class="grp" colspan="4">win</th>
+          <th class="grp" colspan="3">linux</th>
+          <th class="grp" colspan="3">osx</th>
+          <th class="grp" colspan="1">ios</th>
+          <th class="grp" colspan="1">ios9</th>
+          <th class="grp" colspan="1">tvos</th>
+          <th class="grp" colspan="4">android</th>
+          <th class="grp" colspan="1">webos</th>
+          <th class="grp" data-extra colspan="1">switch</th>
+          <th class="grp" data-extra colspan="1">vita</th>
+          <th class="grp" data-extra colspan="1">wiiu</th>
+          <th class="grp" data-extra colspan="1">3ds</th>
+          <th class="grp" data-extra colspan="1">wii</th>
+          <th class="grp" data-extra colspan="1">ngc</th>
+          <th class="grp" data-extra colspan="1">psp</th>
+          <th class="grp" data-extra colspan="1">ps2</th>
+          <th class="grp" data-extra colspan="1">wasm</th>
+          <th class="grp" data-extra colspan="1">miyoo</th>
+          <th class="grp" data-extra colspan="1">dingux</th>
+          <th class="grp" data-extra colspan="1">dingux-ob</th>
+          <th class="grp" data-extra colspan="1">retrofw</th>
+          <th class="grp" data-extra colspan="1">rs90</th>
+          <th class="grp" data-extra colspan="1">ps3</th>
+          <th class="grp" data-extra colspan="1">dos</th>
+          <th class="grp" data-extra colspan="1">ps4</th>
+        </tr>
+        <tr>
+          <th class="plat">x64</th>
+          <th class="plat">i686</th>
+          <th class="plat">msvc x64</th>
+          <th class="plat">msvc i686</th>
+          <th class="plat">x64</th>
+          <th class="plat">i686</th>
+          <th class="plat">aarch64</th>
+          <th class="plat">x64</th>
+          <th class="plat">arm64</th>
+          <th class="plat">x86</th>
+          <th class="plat">arm64</th>
+          <th class="plat"></th>
+          <th class="plat">arm64</th>
+          <th class="plat">arm64-v8a</th>
+          <th class="plat">armeabi-v7a</th>
+          <th class="plat">x86_64</th>
+          <th class="plat">x86</th>
+          <th class="plat">armv7a</th>
+          <th class="plat" data-extra>aarch64</th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra>arm32</th>
+          <th class="plat" data-extra>mips32</th>
+          <th class="plat" data-extra>mips32</th>
+          <th class="plat" data-extra>mips32</th>
+          <th class="plat" data-extra>mips32</th>
+          <th class="plat" data-extra></th>
+          <th class="plat" data-extra>i586</th>
+          <th class="plat" data-extra></th>
         </tr>
       </thead>
       <tbody id="cores"></tbody>
@@ -491,7 +520,19 @@
           if (project.jobsCursor) truncatedRows.push(row);
         }
 
+        sortRows(table);
         return truncatedRows;
+      }
+
+      // GitLab hands back projects ordered by path, which is not the name shown
+      // in the table - Libretro-Supermodel lives at supermodel, for one - and
+      // pages arrive one at a time, so rows are re-sorted as each page lands
+      // rather than trusting the order they came in. Moving an existing row with
+      // appendChild keeps its listeners and the _platformCells on it.
+      function sortRows(table) {
+        const rows = Array.from(table.rows);
+        rows.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name));
+        for (const row of rows) table.appendChild(row);
       }
 
       function saveAndApplyFilters() {

@@ -499,8 +499,12 @@
           if (SKIP_PROJECTS.includes(project.name.toLowerCase()) || SKIP_PROJECTS.includes(project.slug)) continue;
 
           const row = document.createElement('tr');
-          const shown = displayName(project.name);
-          row.dataset.name = shown.toLowerCase();
+          // Lowercased for display too, not only for sorting: the group spells
+          // its projects every which way - Anarch Libretro, beetle-psx, PPSSPP -
+          // and a column that mixes them reads as noisier than it is. The real
+          // spelling stays as the cell's tooltip.
+          const shown = displayName(project.name).toLowerCase();
+          row.dataset.name = shown;
           // The filter still searches what was dropped, so typing "libretro" or
           // the project's path finds the row even though neither is on screen.
           row.dataset.search =

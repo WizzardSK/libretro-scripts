@@ -4,43 +4,111 @@
     <meta charset="utf-8">
     <title>libretro buildbot core status</title>
     <style>
-      body { font-family: sans-serif; margin: 20px; }
+      /* Every colour goes through a token so the dark theme is a matter of
+         redefining them, not of hunting down rules. Light is the plain :root
+         set; dark arrives either because the system asks for it or because the
+         checkbox stamped data-theme on the root, and the checkbox wins both
+         ways. Nothing is stamped until a choice has been saved, so a first
+         visit follows the system with no flash of the wrong theme. */
+      :root {
+        --bg: #fff;
+        --fg: #000;
+        --row-line: #eee;
+        --rule: #ddd;
+        --muted: #666;
+        --btn: #999;
+        --btn-hover: #333;
+        --field-bg: #fff;
+        --field-border: #ccc;
+        --st-pass: #2a2;
+        --st-fail: #c66;
+        --st-none: #ccc;
+        --st-run: #38c;
+        --st-queued: #c80;
+        --st-idle: #99a;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+          --bg: #16181c;
+          --fg: #d8dade;
+          --row-line: #24272d;
+          --rule: #34383f;
+          --muted: #9aa0a8;
+          --btn: #777d85;
+          --btn-hover: #d8dade;
+          --field-bg: #1e2126;
+          --field-border: #3a3f47;
+          --st-pass: #55c355;
+          --st-fail: #e08585;
+          --st-none: #4a4e55;
+          --st-run: #5aa9e6;
+          --st-queued: #d99a2b;
+          --st-idle: #7b8090;
+        }
+      }
+      :root[data-theme="dark"] {
+        --bg: #16181c;
+        --fg: #d8dade;
+        --row-line: #24272d;
+        --rule: #34383f;
+        --muted: #9aa0a8;
+        --btn: #777d85;
+        --btn-hover: #d8dade;
+        --field-bg: #1e2126;
+        --field-border: #3a3f47;
+        --st-pass: #55c355;
+        --st-fail: #e08585;
+        --st-none: #4a4e55;
+        --st-run: #5aa9e6;
+        --st-queued: #d99a2b;
+        --st-idle: #7b8090;
+      }
+      body { font-family: sans-serif; margin: 20px; background: var(--bg); color: var(--fg); }
       table { border-collapse: collapse; }
-      th, td { padding: 4px 8px; vertical-align: middle; border-bottom: 1px solid #eee; }
-      th { position: sticky; top: 0; background: white; text-align: left; }
+      th, td { padding: 4px 8px; vertical-align: middle; border-bottom: 1px solid var(--row-line); }
+      /* The sticky header needs an opaque background of its own, or rows scroll
+         through it. */
+      th { position: sticky; top: 0; background: var(--bg); text-align: left; }
       td:first-child { font-family: monospace; }
       img { vertical-align: middle; }
-      .y { color: #2a2; text-align: center; }
-      .n { color: #c66; text-align: center; }
-      .u { color: #ccc; text-align: center; }
+      .y { color: var(--st-pass); text-align: center; }
+      .n { color: var(--st-fail); text-align: center; }
+      .u { color: var(--st-none); text-align: center; }
       /* Running and queued were one class: both amber circles, so a job that had
          actually started looked the same as one still sitting in the queue. */
-      .r { color: #38c; text-align: center; }
-      .q { color: #c80; text-align: center; }
-      .m { color: #99a; text-align: center; }
-      #legend { margin: 10px 0; color: #666; font-size: 13px; }
+      .r { color: var(--st-run); text-align: center; }
+      .q { color: var(--st-queued); text-align: center; }
+      .m { color: var(--st-idle); text-align: center; }
+      #legend { margin: 10px 0; color: var(--muted); font-size: 13px; }
       #legend span { margin-right: 12px; white-space: nowrap; }
-      .refresh-btn { cursor: pointer; background: none; border: none; color: #999; padding: 0 2px; font-size: 14px; }
-      .refresh-btn:hover { color: #333; }
+      .refresh-btn { cursor: pointer; background: none; border: none; color: var(--btn); padding: 0 2px; font-size: 14px; }
+      .refresh-btn:hover { color: var(--btn-hover); }
       #refresh-all { cursor: pointer; }
-      #status { margin-bottom: 10px; color: #666; }
+      #status { margin-bottom: 10px; color: var(--muted); }
       #filter { margin-bottom: 10px; padding: 4px; width: 300px; }
+      /* Inputs and buttons do not inherit the page colours on their own, so a
+         dark page would otherwise keep white boxes in it. */
+      input[type="text"], input[type="password"], button {
+        background: var(--field-bg); color: var(--fg); border: 1px solid var(--field-border);
+      }
+      .refresh-btn { border: none; background: none; }
+      #tokenstatus { color: var(--muted); }
       /* Console columns are marked on the cells themselves rather than by index,
          since the status classes above rewrite className on every refresh. */
       table.hide-extra [data-extra] { display: none; }
       /* Platform headers span two rows: the platform name once, above one cell
          per architecture it is built for, so the four Windows variants sit under
          a single "win" rather than repeating it. */
-      th.grp { text-align: center; font-weight: bold; border-bottom: 1px solid #ddd; }
+      th.grp { text-align: center; font-weight: bold; border-bottom: 1px solid var(--rule); }
       /* Marks the first column of each group, in the header and in every row, so
          the divider runs down the table instead of stopping under the heading.
          An attribute rather than a class: the status classes rewrite className
          on every refresh, the same reason the console columns are marked this
          way. */
-      [data-gstart] { border-left: 1px solid #ddd; }
+      [data-gstart] { border-left: 1px solid var(--rule); }
       /* min-height keeps arch-less consoles the same height as the rest */
       th.plat { text-align: center; font-weight: normal; font-family: monospace;
-                font-size: 11px; color: #888; min-height: 1.3em; }
+                font-size: 11px; color: var(--muted); min-height: 1.3em; }
     </style>
   </head>
   <body>
@@ -49,13 +117,14 @@
     <div id="tokenbox" style="margin-bottom:10px;">
       <input type="password" id="token" placeholder="GitLab token (stored locally)" style="width:300px;padding:4px;" />
       <button onclick="saveToken()">Save token</button>
-      <span id="tokenstatus" style="color:#666;"></span>
+      <span id="tokenstatus"></span>
     </div>
     <input type="text" id="filter" placeholder="Filter cores..." />
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
     <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console &amp; legacy targets</label>
+    <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
       <span class="y">✓ passed</span>
@@ -563,6 +632,20 @@
         for (const row of rows) table.appendChild(row);
       }
 
+      /* Only stamp the root once there is a choice to honour: leaving the
+         attribute off lets the prefers-color-scheme rule apply, which is what
+         makes a first visit follow the system without a flash of the wrong
+         theme. */
+      function applyTheme() {
+        const dark = document.getElementById('darkMode').checked;
+        document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+      }
+
+      function saveAndApplyTheme() {
+        localStorage.setItem('cores_dark', document.getElementById('darkMode').checked);
+        applyTheme();
+      }
+
       function saveAndApplyFilters() {
         localStorage.setItem('cores_hideOk', document.getElementById('hideOk').checked);
         localStorage.setItem('cores_hideUnknown', document.getElementById('hideUnknown').checked);
@@ -596,6 +679,14 @@
         document.getElementById('hideUnknown').checked = savedHideUnknown !== null ? savedHideUnknown === 'true' : true;
         document.getElementById('onlyFailed').checked = localStorage.getItem('cores_onlyFailed') === 'true';
         document.getElementById('showExtra').checked = localStorage.getItem('cores_showExtra') === 'true';
+        // No saved choice: reflect what the system is already giving them, and
+        // leave the root unstamped so the media query stays in charge.
+        const savedDark = localStorage.getItem('cores_dark');
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.getElementById('darkMode').checked =
+          savedDark !== null ? savedDark === 'true' : systemDark;
+        if (savedDark !== null)
+          applyTheme();
         document.getElementById('filter').addEventListener('input', applyFilters);
         document.getElementById('token').value = getToken();
         document.getElementById('tokenstatus').textContent =

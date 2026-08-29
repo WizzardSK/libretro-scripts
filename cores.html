@@ -731,7 +731,10 @@
       // the browser ends up using, and it changes when the window is resized
       // narrow enough for a header to wrap.
       function measureHeaderOffset() {
-        const first = document.querySelector('#cores-table thead tr:first-child th');
+        // The group cell, not simply the first cell in the row: the Core and
+        // Pipeline headers have rowspan="2", so their height covers both rows
+        // and would push the platform row a whole row too far down.
+        const first = document.querySelector('#cores-table thead tr:first-child th.grp');
         if (!first)
           return;
         document.documentElement.style.setProperty('--head1-h', `${first.getBoundingClientRect().height}px`);

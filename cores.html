@@ -235,8 +235,8 @@
 
       // First column of each header group, so the divider between groups is
       // drawn on the body cells too and not only under the heading.
-      // Column rules: one per group, so ios9/tvos sit inside the Apple group and
-      // webos inside the android one rather than each being ruled off alone.
+      // Column rules: one per group, so ios9 and tvos sit inside the Apple group
+      // and webos inside the Linux one rather than each being ruled off alone.
       const GROUP_STARTS = new Set(['linux-x64', 'osx-x64', 'ios-arm64', 'android-arm64', 'libnx-aarch64', 'vita', 'miyoo-arm32', 'emscripten']);
       // Platforms every core is expected to build. The rest (linux-aarch64,
       // android, win32) are opt-in per core, so a missing job there is not a

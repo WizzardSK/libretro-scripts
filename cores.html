@@ -165,8 +165,8 @@
         <tr>
           <th class="plat">x64</th>
           <th class="plat" title="i686">x86</th>
-          <th class="plat" title="MSVC x64">msvc64</th>
-          <th class="plat" title="MSVC i686">msvc32</th>
+          <th class="plat" title="Windows x64, MSVC">m64</th>
+          <th class="plat" title="Windows i686, MSVC">m32</th>
           <th class="plat" data-gstart>x64</th>
           <th class="plat" title="i686">x86</th>
           <th class="plat" title="aarch64">arm64</th>
@@ -181,18 +181,18 @@
           <th class="plat" data-gstart title="ios arm64">arm64</th>
           <th class="plat" title="ios 9 (armv7)">ios9</th>
           <th class="plat" title="tvos arm64">tvos</th>
-          <th class="plat" data-gstart data-extra title="aarch64">switch</th>
-          <th class="plat" data-extra>wiiu</th>
-          <th class="plat" data-extra>3ds</th>
-          <th class="plat" data-extra>wii</th>
-          <th class="plat" data-extra>ngc</th>
-          <th class="plat" data-gstart data-extra>vita</th>
-          <th class="plat" data-extra>psp</th>
-          <th class="plat" data-extra>ps2</th>
-          <th class="plat" data-extra>ps3</th>
-          <th class="plat" data-extra>ps4</th>
-          <th class="plat" data-gstart data-extra title="Miyoo Mini, arm32">miyoo</th>
-          <th class="plat" data-extra title="Dingux, mips32">dingux</th>
+          <th class="plat" data-gstart data-extra title="Nintendo Switch, aarch64">nsw</th>
+          <th class="plat" data-extra title="Wii U">wiiu</th>
+          <th class="plat" data-extra title="Nintendo 3DS">3ds</th>
+          <th class="plat" data-extra title="Wii">wii</th>
+          <th class="plat" data-extra title="GameCube">ngc</th>
+          <th class="plat" data-gstart data-extra title="PlayStation 4 (orbis)">ps4</th>
+          <th class="plat" data-extra title="PlayStation Vita">vita</th>
+          <th class="plat" data-extra title="PlayStation 3 (psl1ght)">ps3</th>
+          <th class="plat" data-extra title="PlayStation Portable">psp</th>
+          <th class="plat" data-extra title="PlayStation 2">ps2</th>
+          <th class="plat" data-gstart data-extra title="Miyoo Mini, arm32">myo</th>
+          <th class="plat" data-extra title="Dingux, mips32">dgx</th>
           <th class="plat" data-extra title="OpenDingux beta, mips32">ob</th>
           <th class="plat" data-extra title="RetroFW, mips32">rfw</th>
           <th class="plat" data-extra title="RS-90 (OpenDingux beta), mips32">rs90</th>
@@ -228,8 +228,9 @@
 
       // Consoles and legacy toolchains: fewer cores target them and the list is
       // long enough to swamp the table, so they hide behind the checkbox.
+      // Consoles run newest hardware first within their vendor group.
       const PLATFORMS_EXTRA = ['libnx-aarch64', 'wiiu', 'ctr', 'wii', 'ngc',
-                               'vita', 'psp', 'ps2', 'psl1ght', 'orbis',
+                               'orbis', 'vita', 'psl1ght', 'psp', 'ps2',
                                'miyoo-arm32', 'dingux-mips32', 'dingux-odbeta-mips32',
                                'retrofw-mips32', 'rs90-odbeta-mips32',
                                'emscripten', 'djgpp-i586'];

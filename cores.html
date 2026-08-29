@@ -143,11 +143,8 @@
           <th class="grp" colspan="4">win</th>
           <th class="grp" data-gstart colspan="3">linux</th>
           <th class="grp" data-gstart colspan="3">osx</th>
-          <th class="grp" data-gstart colspan="1">ios</th>
-          <th class="grp" data-gstart colspan="1">ios9</th>
-          <th class="grp" data-gstart colspan="1">tvos</th>
-          <th class="grp" data-gstart colspan="4">android</th>
-          <th class="grp" data-gstart colspan="1">webos</th>
+          <th class="grp" data-gstart colspan="3">ios / tvos</th>
+          <th class="grp" data-gstart colspan="5">android / webos</th>
           <th class="grp" data-gstart data-extra colspan="5">Nintendo</th>
           <th class="grp" data-gstart data-extra colspan="5">Sony</th>
           <th class="grp" data-gstart data-extra colspan="5">handhelds</th>
@@ -164,14 +161,14 @@
           <th class="plat" data-gstart>x64</th>
           <th class="plat">arm64</th>
           <th class="plat">x86</th>
-          <th class="plat" data-gstart>arm64</th>
-          <th class="plat" data-gstart></th>
-          <th class="plat" data-gstart>arm64</th>
-          <th class="plat" data-gstart title="arm64-v8a">arm64</th>
-          <th class="plat" title="armeabi-v7a">armv7</th>
-          <th class="plat" title="x86_64">x64</th>
-          <th class="plat">x86</th>
-          <th class="plat" data-gstart title="armv7a">armv7</th>
+          <th class="plat" data-gstart title="ios arm64">arm64</th>
+          <th class="plat" title="ios 9 (armv7)">ios9</th>
+          <th class="plat" title="tvos arm64">tvos</th>
+          <th class="plat" data-gstart title="android arm64-v8a">arm64</th>
+          <th class="plat" title="android armeabi-v7a">armv7</th>
+          <th class="plat" title="android x86_64">x64</th>
+          <th class="plat" title="android x86">x86</th>
+          <th class="plat" title="webos armv7a">webos</th>
           <th class="plat" data-gstart data-extra title="aarch64">switch</th>
           <th class="plat" data-extra>wiiu</th>
           <th class="plat" data-extra>3ds</th>
@@ -223,7 +220,9 @@
 
       // First column of each header group, so the divider between groups is
       // drawn on the body cells too and not only under the heading.
-      const GROUP_STARTS = new Set(['linux-x64', 'osx-x64', 'ios-arm64', 'ios9', 'tvos-arm64', 'android-arm64', 'webos-armv7a', 'libnx-aarch64', 'vita', 'miyoo-arm32', 'emscripten']);
+      // Column rules: one per group, so ios9/tvos sit inside the Apple group and
+      // webos inside the android one rather than each being ruled off alone.
+      const GROUP_STARTS = new Set(['linux-x64', 'osx-x64', 'ios-arm64', 'android-arm64', 'libnx-aarch64', 'vita', 'miyoo-arm32', 'emscripten']);
       // Platforms every core is expected to build. The rest (linux-aarch64,
       // android, win32) are opt-in per core, so a missing job there is not a
       // defect — but a *failing* job on any platform still is (see updateRowCells).

@@ -67,8 +67,17 @@
       table { border-collapse: collapse; }
       th, td { padding: 4px 8px; vertical-align: middle; border-bottom: 1px solid var(--row-line); }
       /* The sticky header needs an opaque background of its own, or rows scroll
-         through it. */
-      th { position: sticky; top: 0; background: var(--bg); text-align: left; }
+         through it. Both header rows stick: the group row at the top, the
+         platform row directly under it - hence the offset, measured at runtime
+         into --head1-h, since the row's height depends on the font the browser
+         picks. z-index keeps the group row above the platform row where their
+         backgrounds meet. */
+      th { position: sticky; background: var(--bg); text-align: left; }
+      thead tr:first-child th { top: 0; z-index: 2; }
+      thead tr:nth-child(2) th { top: var(--head1-h, 26px); z-index: 1; }
+      /* The bottom border scrolls with the cell, not with the sticky box, so
+         the header would otherwise lose its rule against the first row. */
+      thead tr:nth-child(2) th { box-shadow: inset 0 -1px 0 var(--row-line); }
       td:first-child { font-family: monospace; }
       img { vertical-align: middle; }
       .y { color: var(--st-pass); text-align: center; }
@@ -93,9 +102,6 @@
       }
       .refresh-btn { border: none; background: none; }
       #tokenstatus { color: var(--muted); }
-      /* Console columns are marked on the cells themselves rather than by index,
-         since the status classes above rewrite className on every refresh. */
-      table.hide-extra [data-extra] { display: none; }
       /* Platform headers span two rows: the platform name once, above one cell
          per architecture it is built for, so the four Windows variants sit under
          a single "win" rather than repeating it. */
@@ -123,7 +129,6 @@
     <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
-    <label><input type="checkbox" id="showExtra" onchange="saveAndApplyFilters()"> Show console &amp; legacy targets</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
@@ -135,20 +140,20 @@
       <span class="u">— no such job</span>
       <span class="u">? no pipeline data</span>
     </div>
-    <table id="cores-table" class="hide-extra">
+    <table id="cores-table">
       <thead>
         <tr>
           <th rowspan="2">Core</th>
           <th rowspan="2">Pipeline</th>
-          <th class="grp" colspan="4">win</th>
-          <th class="grp" data-gstart colspan="3">linux</th>
-          <th class="grp" data-gstart colspan="3">osx</th>
-          <th class="grp" data-gstart colspan="3">ios / tvos</th>
-          <th class="grp" data-gstart colspan="5">android / webos</th>
+          <th class="grp" colspan="4">Windows</th>
+          <th class="grp" data-gstart colspan="3">Linux</th>
+          <th class="grp" data-gstart colspan="3">macOS</th>
+          <th class="grp" data-gstart colspan="3">iOS / tvOS</th>
+          <th class="grp" data-gstart colspan="5">Android / webOS</th>
           <th class="grp" data-gstart data-extra colspan="5">Nintendo</th>
           <th class="grp" data-gstart data-extra colspan="5">Sony</th>
-          <th class="grp" data-gstart data-extra colspan="5">handhelds</th>
-          <th class="grp" data-gstart data-extra colspan="2">other</th>
+          <th class="grp" data-gstart data-extra colspan="5">Handhelds</th>
+          <th class="grp" data-gstart data-extra colspan="2">Other</th>
         </tr>
         <tr>
           <th class="plat">x64</th>
@@ -649,13 +654,10 @@
         localStorage.setItem('cores_hideOk', document.getElementById('hideOk').checked);
         localStorage.setItem('cores_hideUnknown', document.getElementById('hideUnknown').checked);
         localStorage.setItem('cores_onlyFailed', document.getElementById('onlyFailed').checked);
-        localStorage.setItem('cores_showExtra', document.getElementById('showExtra').checked);
         applyFilters();
       }
 
       function applyFilters() {
-        document.getElementById('cores-table').classList.toggle(
-          'hide-extra', !document.getElementById('showExtra').checked);
         const query = document.getElementById('filter').value.toLowerCase();
         const hideOk = document.getElementById('hideOk').checked;
         const hideUnknown = document.getElementById('hideUnknown').checked;
@@ -677,7 +679,6 @@
         document.getElementById('hideOk').checked = savedHideOk === 'true';
         document.getElementById('hideUnknown').checked = savedHideUnknown !== null ? savedHideUnknown === 'true' : true;
         document.getElementById('onlyFailed').checked = localStorage.getItem('cores_onlyFailed') === 'true';
-        document.getElementById('showExtra').checked = localStorage.getItem('cores_showExtra') === 'true';
         // No saved choice: reflect what the system is already giving them, and
         // leave the root unstamped so the media query stays in charge.
         const savedDark = localStorage.getItem('cores_dark');
@@ -725,8 +726,21 @@
         }
       }
 
+      // The platform row sticks directly below the group row, so it needs that
+      // row's height. Measured rather than hard-coded: it depends on the font
+      // the browser ends up using, and it changes when the window is resized
+      // narrow enough for a header to wrap.
+      function measureHeaderOffset() {
+        const first = document.querySelector('#cores-table thead tr:first-child th');
+        if (!first)
+          return;
+        document.documentElement.style.setProperty('--head1-h', `${first.getBoundingClientRect().height}px`);
+      }
+
       function main() {
         setupFilter();
+        measureHeaderOffset();
+        window.addEventListener('resize', measureHeaderOffset);
         loadAll();
       }
 

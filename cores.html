@@ -66,6 +66,13 @@
       body { font-family: sans-serif; margin: 20px; background: var(--bg); color: var(--fg); }
       table { border-collapse: collapse; }
       th, td { padding: 4px 8px; vertical-align: middle; border-bottom: 1px solid var(--row-line); }
+      /* A status cell holds one glyph, so each column is exactly as wide as its
+         own header plus padding - and there are 35 of them. Tightening the
+         platform headers and the cells under them is what keeps the table on a
+         laptop screen; the two leading columns (core name, pipeline) keep the
+         normal padding. */
+      th.plat { padding: 4px 5px; font-size: 12px; font-weight: normal; }
+      td:not(:first-child):not(:nth-child(2)) { padding: 4px 5px; }
       /* The sticky header needs an opaque background of its own, or rows scroll
          through it. Both header rows stick: the group row at the top, the
          platform row directly under it - hence the offset, measured at runtime
@@ -184,11 +191,11 @@
           <th class="plat" data-extra>ps2</th>
           <th class="plat" data-extra>ps3</th>
           <th class="plat" data-extra>ps4</th>
-          <th class="plat" data-gstart data-extra title="arm32">miyoo</th>
-          <th class="plat" data-extra title="mips32">dingux</th>
-          <th class="plat" data-extra title="mips32">dingux-ob</th>
-          <th class="plat" data-extra title="mips32">retrofw</th>
-          <th class="plat" data-extra title="mips32">rs90</th>
+          <th class="plat" data-gstart data-extra title="Miyoo Mini, arm32">miyoo</th>
+          <th class="plat" data-extra title="Dingux, mips32">dingux</th>
+          <th class="plat" data-extra title="OpenDingux beta, mips32">ob</th>
+          <th class="plat" data-extra title="RetroFW, mips32">rfw</th>
+          <th class="plat" data-extra title="RS-90 (OpenDingux beta), mips32">rs90</th>
           <th class="plat" data-gstart data-extra>wasm</th>
           <th class="plat" data-extra title="i586">dos</th>
         </tr>

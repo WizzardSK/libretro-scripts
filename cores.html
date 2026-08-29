@@ -205,7 +205,10 @@
 
     <script>
       const GITLAB_URL = 'https://git.libretro.com';
-      const GROUP = 'libretro';
+      // Both groups the buildbot builds from. internal-cores holds a single
+      // project (qemu-libretro), which is why a core with green pipelines could
+      // be missing from this table entirely.
+      const GROUPS = ['libretro', 'internal-cores'];
       const PAGE_SIZE = 50;
       // Desktop/mobile targets, always shown. Roughly the platforms most cores in
       // the group actually build, so a blank here is usually a gap rather than a
@@ -707,27 +710,29 @@
       // page of PAGE_SIZE projects. Rows render incrementally as each page lands.
       async function loadAll() {
         const status = document.getElementById('status');
-        const query = `query($cursor: String) {
-          group(fullPath: "${GROUP}") {
-            projects(first: ${PAGE_SIZE}, sort: PATH_ASC, after: $cursor) {
-              pageInfo { hasNextPage endCursor }
-              nodes { ${PROJECT_FIELDS} }
-            }
-          }
-        }`;
-
-        let cursor = null;
         let loaded = 0;
         try {
-          while (true) {
-            const data = await gql(query, { cursor });
-            const conn = data.group.projects;
-            const truncatedRows = appendProjects(conn.nodes.map(normalizeProject));
-            loaded += conn.nodes.length;
-            status.textContent = `Loading... (${loaded})`;
-            for (const row of truncatedRows) await completeJobs(row);
-            if (!conn.pageInfo.hasNextPage) break;
-            cursor = conn.pageInfo.endCursor;
+          for (const group of GROUPS) {
+            const query = `query($cursor: String) {
+              group(fullPath: "${group}") {
+                projects(first: ${PAGE_SIZE}, sort: PATH_ASC, after: $cursor) {
+                  pageInfo { hasNextPage endCursor }
+                  nodes { ${PROJECT_FIELDS} }
+                }
+              }
+            }`;
+
+            let cursor = null;
+            while (true) {
+              const data = await gql(query, { cursor });
+              const conn = data.group.projects;
+              const truncatedRows = appendProjects(conn.nodes.map(normalizeProject));
+              loaded += conn.nodes.length;
+              status.textContent = `Loading... (${loaded})`;
+              for (const row of truncatedRows) await completeJobs(row);
+              if (!conn.pageInfo.hasNextPage) break;
+              cursor = conn.pageInfo.endCursor;
+            }
           }
           status.textContent = `${loaded} projects`;
         } catch (err) {

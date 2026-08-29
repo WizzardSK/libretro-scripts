@@ -154,9 +154,9 @@
           <th rowspan="2">Pipeline</th>
           <th class="grp" colspan="4">Windows</th>
           <th class="grp" data-gstart colspan="4">Linux</th>
+          <th class="grp" data-gstart colspan="4">Android</th>
           <th class="grp" data-gstart colspan="3">macOS</th>
           <th class="grp" data-gstart colspan="3">iOS / tvOS</th>
-          <th class="grp" data-gstart colspan="4">Android</th>
           <th class="grp" data-gstart data-extra colspan="5">Nintendo</th>
           <th class="grp" data-gstart data-extra colspan="5">Sony</th>
           <th class="grp" data-gstart data-extra colspan="5">Handhelds</th>
@@ -171,16 +171,16 @@
           <th class="plat" title="i686">x86</th>
           <th class="plat" title="aarch64">arm64</th>
           <th class="plat" title="webOS, armv7a">webos</th>
-          <th class="plat" data-gstart>x64</th>
-          <th class="plat">arm64</th>
-          <th class="plat">x86</th>
-          <th class="plat" data-gstart title="ios arm64">arm64</th>
-          <th class="plat" title="ios 9 (armv7)">ios9</th>
-          <th class="plat" title="tvos arm64">tvos</th>
           <th class="plat" data-gstart title="android arm64-v8a">arm64</th>
           <th class="plat" title="android armeabi-v7a">armv7</th>
           <th class="plat" title="android x86_64">x64</th>
           <th class="plat" title="android x86">x86</th>
+          <th class="plat" data-gstart title="macOS x86_64">x64</th>
+          <th class="plat" title="macOS arm64">arm64</th>
+          <th class="plat" title="macOS i386">x86</th>
+          <th class="plat" data-gstart title="ios arm64">arm64</th>
+          <th class="plat" title="ios 9 (armv7)">ios9</th>
+          <th class="plat" title="tvos arm64">tvos</th>
           <th class="plat" data-gstart data-extra title="aarch64">switch</th>
           <th class="plat" data-extra>wiiu</th>
           <th class="plat" data-extra>3ds</th>
@@ -222,9 +222,9 @@
       // walking this list - so moving it moves the column.
       const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'windows-msvc-x64', 'windows-msvc-i686',
                               'linux-x64', 'linux-i686', 'linux-aarch64', 'webos-armv7a',
+                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
                               'osx-x64', 'osx-arm64', 'osx-x86',
-                              'ios-arm64', 'ios9', 'tvos-arm64',
-                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86'];
+                              'ios-arm64', 'ios9', 'tvos-arm64'];
 
       // Consoles and legacy toolchains: fewer cores target them and the list is
       // long enough to swamp the table, so they hide behind the checkbox.

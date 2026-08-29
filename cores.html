@@ -171,13 +171,13 @@
           <th class="plat" title="i686">x86</th>
           <th class="plat" title="aarch64">arm64</th>
           <th class="plat" title="webOS, armv7a">webos</th>
-          <th class="plat" data-gstart title="android arm64-v8a">arm64</th>
-          <th class="plat" title="android armeabi-v7a">armv7</th>
-          <th class="plat" title="android x86_64">x64</th>
+          <th class="plat" data-gstart title="android x86_64">x64</th>
           <th class="plat" title="android x86">x86</th>
+          <th class="plat" title="android arm64-v8a">arm64</th>
+          <th class="plat" title="android armeabi-v7a">armv7</th>
           <th class="plat" data-gstart title="macOS x86_64">x64</th>
-          <th class="plat" title="macOS arm64">arm64</th>
           <th class="plat" title="macOS i386">x86</th>
+          <th class="plat" title="macOS arm64">arm64</th>
           <th class="plat" data-gstart title="ios arm64">arm64</th>
           <th class="plat" title="ios 9 (armv7)">ios9</th>
           <th class="plat" title="tvos arm64">tvos</th>
@@ -222,8 +222,8 @@
       // walking this list - so moving it moves the column.
       const PLATFORMS_MAIN = ['windows-x64', 'windows-i686', 'windows-msvc-x64', 'windows-msvc-i686',
                               'linux-x64', 'linux-i686', 'linux-aarch64', 'webos-armv7a',
-                              'android-arm64', 'android-armv7', 'android-x86_64', 'android-x86',
-                              'osx-x64', 'osx-arm64', 'osx-x86',
+                              'android-x86_64', 'android-x86', 'android-arm64', 'android-armv7',
+                              'osx-x64', 'osx-x86', 'osx-arm64',
                               'ios-arm64', 'ios9', 'tvos-arm64'];
 
       // Consoles and legacy toolchains: fewer cores target them and the list is
@@ -295,7 +295,7 @@
         'webos-armv7a': ['libretro-build-webos-armv7a', 'webos'],
         // Console job names are matched with their full libretro-build- prefix on
         // purpose: bare 'ctr' also lives inside 'spectrum', bare 'wii' inside 'wiiu'.
-        'libnx-aarch64': ['libretro-build-libnx-aarch64'],
+        'libnx-aarch64': ['libretro-build-libnx-aarch64', 'libnx'],
         'vita': ['libretro-build-vita'],
         'wiiu': ['libretro-build-wiiu'],
         'ctr': ['libretro-build-ctr'],
@@ -303,25 +303,25 @@
         'ngc': ['libretro-build-ngc'],
         'psp': ['libretro-build-psp'],
         'ps2': ['libretro-build-ps2'],
-        'emscripten': ['libretro-build-emscripten'],
-        'miyoo-arm32': ['libretro-build-miyoo-arm32'],
-        'dingux-mips32': ['libretro-build-dingux-mips32'],
-        'dingux-odbeta-mips32': ['libretro-build-dingux-odbeta-mips32'],
-        'retrofw-mips32': ['libretro-build-retrofw-mips32'],
-        'rs90-odbeta-mips32': ['libretro-build-rs90-odbeta-mips32'],
+        'emscripten': ['libretro-build-emscripten', 'emscripten'],
+        'miyoo-arm32': ['libretro-build-miyoo-arm32', 'miyoo-arm32'],
+        'dingux-mips32': ['libretro-build-dingux-mips32', 'dingux-mips32'],
+        'dingux-odbeta-mips32': ['libretro-build-dingux-odbeta-mips32', 'dingux-odbeta-mips32'],
+        'retrofw-mips32': ['libretro-build-retrofw-mips32', 'retrofw-mips32'],
+        'rs90-odbeta-mips32': ['libretro-build-rs90-odbeta-mips32', 'rs90-mips32'],
         'osx-x64': ['libretro-build-osx-x64', 'build-retroarch-osx-x64', 'build-retroarch-osx-universal-metal', 'build-retroarch-osx-opengl-x64', 'osx-x64'],
         'osx-arm64': ['libretro-build-osx-arm64', 'build-retroarch-osx-arm64', 'build-retroarch-osx-universal-metal', 'osx-arm64'],
         'ios-arm64': ['libretro-build-ios-arm64', 'build-retroarch-ios-arm64', 'ios-arm64'],
         'tvos-arm64': ['libretro-build-tvos-arm64', 'build-retroarch-tvos-arm64', 'tvos-arm64'],
         // Legacy iOS. 129 of the 180 cores with CI jobs build it - more than
         // switch or vita - and no other pattern here matches it.
-        'ios9': ['libretro-build-ios9'],
+        'ios9': ['libretro-build-ios9', 'ios9'],
         // One column per word size rather than per MSVC version, so msvc05,
         // msvc10 and msvc19 all land in the same place.
         'windows-msvc-x64': ['libretro-build-windows-msvc'],
         'windows-msvc-i686': ['libretro-build-windows-msvc'],
         'psl1ght': ['libretro-build-psl1ght'],
-        'osx-x86': ['libretro-build-osx-x86'],
+        'osx-x86': ['libretro-build-osx-x86', 'osx-x86'],
         'djgpp-i586': ['libretro-build-djgpp'],
         'orbis': ['libretro-build-orbis'],
       };
@@ -329,12 +329,17 @@
       // Patterns that must NOT match, checked after PLATFORM_JOB_PATTERNS.
       // Job matching is substring-based, so 'android-x86' would otherwise
       // swallow the separate 'android-x86_64' job (and win-x64 the msvc ones).
+      // The bare patterns above (a few cores name their jobs 'emscripten' or
+      // 'ios9' with no libretro-build- prefix) also need RetroArch's own
+      // static builds kept out.
       const PLATFORM_JOB_EXCLUDES = {
         'android-x86': ['android-x86_64', 'android-x86-64'],
         'windows-x64': ['msvc'],
         'windows-i686': ['msvc'],
         'wii': ['wiiu'],
         'dingux-mips32': ['odbeta'],
+        'emscripten': ['static-retroarch'],
+        'libnx-aarch64': ['static-retroarch'],
         'linux-i686': ['x86_64', 'x86-64'],
         'windows-msvc-x64': ['i686'],
         'windows-msvc-i686': ['x64'],

@@ -292,10 +292,15 @@
         'linux-x64': ['libretro-build-linux-x64', 'build-retroarch-linux-x64', 'linux-x64'],
         'linux-i686': ['libretro-build-linux-i686', 'build-retroarch-linux-i686', 'linux-i686', 'linux-x86'],
         'linux-aarch64': ['libretro-build-linux-aarch64', 'build-retroarch-linux-aarch64', 'linux-aarch64', 'linux-arm64'],
-        'android-arm64': ['android-arm64-v8a', 'android-arm64', 'build-retroarch-android-aarch64'],
-        'android-x86_64': ['android-x86_64', 'android-x86-64'],
-        'android-armv7': ['android-armeabi-v7a', 'build-retroarch-android-armv7'],
-        'android-x86': ['android-x86'],
+        // RetroArch's own Android jobs are per-flavour, not per-ABI: 'normal' is
+        // the universal APK (all four ABIs), 'aarch64' is arm64-v8a + x86_64 and
+        // 'ra32' is armeabi-v7a + x86, so each job belongs in several columns and
+        // there is no build-retroarch-android-armv7 job to match. The playstore-*
+        // jobs are AAB bundles that never reach the buildbot, so they stay out.
+        'android-arm64': ['android-arm64-v8a', 'android-arm64', 'build-retroarch-android-aarch64', 'build-retroarch-android-normal'],
+        'android-x86_64': ['android-x86_64', 'android-x86-64', 'build-retroarch-android-aarch64', 'build-retroarch-android-normal'],
+        'android-armv7': ['android-armeabi-v7a', 'build-retroarch-android-ra32', 'build-retroarch-android-normal'],
+        'android-x86': ['android-x86', 'build-retroarch-android-ra32', 'build-retroarch-android-normal'],
         'webos-armv7a': ['libretro-build-webos-armv7a', 'webos'],
         // Console job names are matched with their full libretro-build- prefix on
         // purpose: bare 'ctr' also lives inside 'spectrum', bare 'wii' inside 'wiiu'.

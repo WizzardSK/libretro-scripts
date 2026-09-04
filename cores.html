@@ -133,7 +133,7 @@
       <span id="tokenstatus"></span>
     </div>
     <input type="text" id="filter" placeholder="Filter cores..." />
-    <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide all-OK rows</label>
+    <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide rows with nothing red</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
@@ -245,11 +245,6 @@
       // body cells get their rule from this, and the headers from data-gstart,
       // so the two drift apart the moment a group is reordered.
       const GROUP_STARTS = new Set(['linux-x64', 'android-x86_64', 'osx-x64', 'ios-arm64', 'libnx-aarch64', 'orbis', 'miyoo-arm32', 'emscripten']);
-      // Platforms every core is expected to build. The rest (linux-aarch64,
-      // android, win32) are opt-in per core, so a missing job there is not a
-      // defect — but a *failing* job on any platform still is (see updateRowCells).
-      const PLATFORMS_REQUIRED = ['windows-x64', 'linux-x64', 'osx-x64', 'osx-arm64', 'ios-arm64', 'tvos-arm64'];
-
       // Projects to skip (superseded or deprecated)
       const SKIP_PROJECTS = ['flycast', 'uae4arm-libretro'];
 
@@ -520,7 +515,6 @@
         const status = project.status;
         const isUnknown = !status || status === 'skipped' || status === 'manual';
         const isPassed = status === 'success';
-        let allOk = true;
         let anyFailed = false;
         for (let i = 0; i < PLATFORMS.length; i++) {
           const platform = PLATFORMS[i];
@@ -528,11 +522,7 @@
           const display = entry.status === null ? JOB_MISSING
             : entry.status === 'no_pipeline' ? JOB_NO_PIPELINE
             : (JOB_DISPLAY[entry.status] || JOB_UNKNOWN);
-          // A required platform with no job is as bad as one that failed; an
-          // optional platform only counts against the row when it actually broke.
           if (entry.status === 'failed') anyFailed = true;
-          if (entry.status !== 'success' &&
-              (PLATFORMS_REQUIRED.includes(platform) || entry.status === 'failed')) allOk = false;
           const cell = row._platformCells[i];
           cell.textContent = display.text;
           cell.className = display.cls;
@@ -548,7 +538,12 @@
         link.className = isPassed ? 'y' : (isUnknown ? 'u' : 'n');
 
         row._project = project;
-        row.dataset.ok = (isPassed && allOk) ? 'true' : 'false';
+        // "Nothing red": no platform job failed, and the pipeline itself is not
+        // drawn red either - which is every status that is neither passed nor
+        // one of the unknowns above. A core that simply has no job for a
+        // platform shows a dash, not a cross, and does not hold the row here.
+        const pipelineRed = !isPassed && !isUnknown;
+        row.dataset.ok = (!anyFailed && !pipelineRed) ? 'true' : 'false';
         row.dataset.unknown = isUnknown ? 'true' : 'false';
         row.dataset.failed = anyFailed ? 'true' : 'false';
         applyFilters();

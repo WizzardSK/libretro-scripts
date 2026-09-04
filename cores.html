@@ -133,7 +133,7 @@
       <span id="tokenstatus"></span>
     </div>
     <input type="text" id="filter" placeholder="Filter cores..." />
-    <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide rows with nothing red</label>
+    <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide passing rows</label>
     <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
     <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
@@ -538,12 +538,16 @@
         link.className = isPassed ? 'y' : (isUnknown ? 'u' : 'n');
 
         row._project = project;
-        // "Nothing red": no platform job failed, and the pipeline itself is not
-        // drawn red either - which is every status that is neither passed nor
-        // one of the unknowns above. A core that simply has no job for a
-        // platform shows a dash, not a cross, and does not hold the row here.
-        const pipelineRed = !isPassed && !isUnknown;
-        row.dataset.ok = (!anyFailed && !pipelineRed) ? 'true' : 'false';
+        // The three row classes the filters switch on are meant to be distinct:
+        // passing (green pipeline, nothing failed), unknown (no pipeline to read)
+        // and failed (a job broke). A row that is neither - a pipeline that is
+        // running, or one that failed on a job with no column of its own - is
+        // none of the three and stays on screen whichever boxes are ticked,
+        // which is right: something about it is red.
+        //
+        // A core that has no job for a platform shows a dash, not a cross, and
+        // that no longer holds the row here.
+        row.dataset.ok = (isPassed && !anyFailed) ? 'true' : 'false';
         row.dataset.unknown = isUnknown ? 'true' : 'false';
         row.dataset.failed = anyFailed ? 'true' : 'false';
         applyFilters();

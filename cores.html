@@ -133,9 +133,9 @@
       <span id="tokenstatus"></span>
     </div>
     <input type="text" id="filter" placeholder="Filter cores..." />
-    <label><input type="checkbox" id="hideOk" onchange="saveAndApplyFilters()"> Hide passing rows</label>
-    <label><input type="checkbox" id="hideUnknown" onchange="saveAndApplyFilters()"> Hide unknown pipelines</label>
-    <label><input type="checkbox" id="onlyFailed" onchange="saveAndApplyFilters()"> Only rows with failed jobs</label>
+    <label><input type="checkbox" id="showOk" onchange="saveAndApplyFilters()"> Show only OK</label>
+    <label><input type="checkbox" id="showFailed" onchange="saveAndApplyFilters()"> Show only failed</label>
+    <label><input type="checkbox" id="showUnknown" onchange="saveAndApplyFilters()"> Show only unknown pipelines</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
@@ -683,34 +683,46 @@
       }
 
       function saveAndApplyFilters() {
-        localStorage.setItem('cores_hideOk', document.getElementById('hideOk').checked);
-        localStorage.setItem('cores_hideUnknown', document.getElementById('hideUnknown').checked);
-        localStorage.setItem('cores_onlyFailed', document.getElementById('onlyFailed').checked);
+        localStorage.setItem('cores_showOk', document.getElementById('showOk').checked);
+        localStorage.setItem('cores_showFailed', document.getElementById('showFailed').checked);
+        localStorage.setItem('cores_showUnknown', document.getElementById('showUnknown').checked);
         applyFilters();
+      }
+
+      // Every row is exactly one of three things, so the three boxes can be
+      // ticked in any combination and each keeps meaning what it says: with
+      // none of them ticked nothing is filtered out, and with several ticked
+      // you get the union. "Failed" is everything the table draws red - a job
+      // that broke, and also a pipeline that is red for a reason no column
+      // shows, such as a failure in a job this table has no column for.
+      function rowClass(row) {
+        if (row.dataset.ok === 'true') return 'ok';
+        if (row.dataset.unknown === 'true') return 'unknown';
+        return 'failed';
       }
 
       function applyFilters() {
         const query = document.getElementById('filter').value.toLowerCase();
-        const hideOk = document.getElementById('hideOk').checked;
-        const hideUnknown = document.getElementById('hideUnknown').checked;
-        const onlyFailed = document.getElementById('onlyFailed').checked;
+        const show = {
+          ok: document.getElementById('showOk').checked,
+          failed: document.getElementById('showFailed').checked,
+          unknown: document.getElementById('showUnknown').checked,
+        };
+        const anyChecked = show.ok || show.failed || show.unknown;
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
           const matchesQuery = row.dataset.search.includes(query);
-          const isOk = row.dataset.ok === 'true';
-          const isUnknown = row.dataset.unknown === 'true';
-          const hasFailed = row.dataset.failed === 'true';
-          const hidden = (hideOk && isOk) || (hideUnknown && isUnknown) || (onlyFailed && !hasFailed);
-          row.style.display = (matchesQuery && !hidden) ? '' : 'none';
+          const visible = !anyChecked || show[rowClass(row)];
+          row.style.display = (matchesQuery && visible) ? '' : 'none';
         }
       }
 
       function setupFilter() {
-        const savedHideOk = localStorage.getItem('cores_hideOk');
-        const savedHideUnknown = localStorage.getItem('cores_hideUnknown');
-        document.getElementById('hideOk').checked = savedHideOk === 'true';
-        document.getElementById('hideUnknown').checked = savedHideUnknown !== null ? savedHideUnknown === 'true' : true;
-        document.getElementById('onlyFailed').checked = localStorage.getItem('cores_onlyFailed') === 'true';
+        // Unticked by default, which shows everything - the filters are there to
+        // narrow that down, not to hide part of the table before anyone asks.
+        document.getElementById('showOk').checked = localStorage.getItem('cores_showOk') === 'true';
+        document.getElementById('showFailed').checked = localStorage.getItem('cores_showFailed') === 'true';
+        document.getElementById('showUnknown').checked = localStorage.getItem('cores_showUnknown') === 'true';
         // No saved choice: reflect what the system is already giving them, and
         // leave the root unstamped so the media query stays in charge.
         const savedDark = localStorage.getItem('cores_dark');

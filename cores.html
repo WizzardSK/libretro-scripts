@@ -404,7 +404,7 @@
             ref
             jobs(first: 100) {
               pageInfo { hasNextPage endCursor }
-              nodes { name status }
+              nodes { name status retried }
             }
           }
         }`;
@@ -429,6 +429,12 @@
       function normalizeJobs(nodes) {
         return (nodes || [])
           .filter(job => job && job.name)
+          // A retried job leaves its failed original in the pipeline, under the
+          // same name. Keeping it made the worst-status rule below read the
+          // corpse rather than the retry, so a core that was retried green
+          // showed a red cell - which is what happens to Wii U most often,
+          // since that is the job that gets retried.
+          .filter(job => !job.retried)
           .map(job => ({ name: job.name.toLowerCase(), status: (job.status || '').toLowerCase() }))
           .filter(job => !job.name.includes('dummy'));
       }
@@ -487,7 +493,7 @@
             pipeline(iid: $iid) {
               jobs(first: 100, after: $cursor) {
                 pageInfo { hasNextPage endCursor }
-                nodes { name status }
+                nodes { name status retried }
               }
             }
           }

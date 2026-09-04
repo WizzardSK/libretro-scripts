@@ -689,30 +689,35 @@
         applyFilters();
       }
 
-      // Every row is exactly one of three things, so the three boxes can be
-      // ticked in any combination and each keeps meaning what it says: with
-      // none of them ticked nothing is filtered out, and with several ticked
-      // you get the union. "Failed" is everything the table draws red - a job
-      // that broke, and also a pipeline that is red for a reason no column
-      // shows, such as a failure in a job this table has no column for.
+      // Every row is exactly one of three things. "Failed" is everything the
+      // table draws red - a job that broke, and also a pipeline that is red for
+      // a reason no column shows, such as a failure in a job this table has no
+      // column of its own for.
       function rowClass(row) {
         if (row.dataset.ok === 'true') return 'ok';
         if (row.dataset.unknown === 'true') return 'unknown';
         return 'failed';
       }
 
+      // The two "only" boxes narrow the table; unticking both means no
+      // narrowing at all, which is why the default shows everything. The
+      // unknown box does not narrow anything - it adds the pipelines there is
+      // nothing to say about to whatever the other two are showing, so on its
+      // own it changes nothing.
       function applyFilters() {
         const query = document.getElementById('filter').value.toLowerCase();
-        const show = {
+        const only = {
           ok: document.getElementById('showOk').checked,
           failed: document.getElementById('showFailed').checked,
-          unknown: document.getElementById('showUnknown').checked,
         };
-        const anyChecked = show.ok || show.failed || show.unknown;
+        const narrowed = only.ok || only.failed;
+        const showUnknown = document.getElementById('showUnknown').checked;
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
           const matchesQuery = row.dataset.search.includes(query);
-          const visible = !anyChecked || show[rowClass(row)];
+          const cls = rowClass(row);
+          const visible = !narrowed
+            || (cls === 'unknown' ? showUnknown : only[cls]);
           row.style.display = (matchesQuery && visible) ? '' : 'none';
         }
       }

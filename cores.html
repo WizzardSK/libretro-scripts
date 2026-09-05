@@ -136,6 +136,7 @@
     <label><input type="checkbox" id="showOk" onchange="saveAndApplyFilters()"> Show only OK</label>
     <label><input type="checkbox" id="showFailed" onchange="saveAndApplyFilters()"> Show only failed</label>
     <label><input type="checkbox" id="showUnknown" onchange="saveAndApplyFilters()"> Show unknown pipelines</label>
+    <label><input type="checkbox" id="showProgress" onchange="saveAndApplyFilters()"> Show unfinished pipelines</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
@@ -209,7 +210,7 @@
       // project (qemu-libretro), which is why a core with green pipelines could
       // be missing from this table entirely.
       const GROUPS = ['libretro', 'internal-cores'];
-      const PAGE_SIZE = 50;
+      const PAGE_SIZE = 20;
       // Desktop/mobile targets, always shown. Roughly the platforms most cores in
       // the group actually build, so a blank here is usually a gap rather than a
       // deliberate choice. Note that the Android jobs are named without the
@@ -412,7 +413,16 @@
       const STATUS_LABELS = {
         success: 'passed', failed: 'failed', running: 'running', pending: 'pending',
         canceled: 'canceled', created: 'created', skipped: 'skipped', manual: 'manual',
+        preparing: 'preparing', scheduled: 'scheduled',
+        waiting_for_resource: 'waiting for resource',
       };
+
+      // A pipeline that has not finished yet. It is not a result, so it is not
+      // a failure either - these used to land in the failed bucket simply
+      // because that is where everything that was not green and not unknown
+      // ended up.
+      const PIPELINE_IN_PROGRESS = new Set(['running', 'pending', 'created', 'preparing',
+                                            'scheduled', 'waiting_for_resource']);
 
       // Most alarming of several job statuses (see JOB_STATUS_RANK).
       function worstStatus(statuses) {
@@ -541,21 +551,28 @@
         const link = row._statusCell.firstChild;
         link.href = `${project.webUrl}/-/pipelines`;
         link.textContent = STATUS_LABELS[status] || status || 'none';
-        link.className = isPassed ? 'y' : (isUnknown ? 'u' : 'n');
+        link.className = isPassed ? 'y' :
+          (isUnknown ? 'u' : (PIPELINE_IN_PROGRESS.has(status) ? 'r' : 'n'));
 
         row._project = project;
-        // The three row classes the filters switch on are meant to be distinct:
-        // passing (green pipeline, nothing failed), unknown (no pipeline to read)
-        // and failed (a job broke). A row that is neither - a pipeline that is
-        // running, or one that failed on a job with no column of its own - is
-        // none of the three and stays on screen whichever boxes are ticked,
-        // which is right: something about it is red.
+        // The row classes the filters switch on are meant to be distinct:
+        // passing (green pipeline, nothing failed), unknown (no pipeline to
+        // read), in progress (a pipeline that has not finished) and failed (a
+        // job broke, or the pipeline is red for a reason no column shows).
+        //
+        // In progress is its own class rather than part of failed: a queued or
+        // running pipeline has produced no result yet, and counting it as a
+        // failure made every buildbot run look like a wave of breakage while it
+        // was still going. A job of its own that has already failed still
+        // counts, even while the rest of the pipeline runs.
         //
         // A core that has no job for a platform shows a dash, not a cross, and
         // that no longer holds the row here.
+        const isInProgress = !anyFailed && !isPassed && !isUnknown && PIPELINE_IN_PROGRESS.has(status);
         row.dataset.ok = (isPassed && !anyFailed) ? 'true' : 'false';
         row.dataset.unknown = isUnknown ? 'true' : 'false';
-        row.dataset.failed = anyFailed ? 'true' : 'false';
+        row.dataset.running = isInProgress ? 'true' : 'false';
+        row.dataset.failed = (!isInProgress && !isUnknown && !(isPassed && !anyFailed)) ? 'true' : 'false';
         applyFilters();
       }
 
@@ -686,24 +703,28 @@
         localStorage.setItem('cores_showOk', document.getElementById('showOk').checked);
         localStorage.setItem('cores_showFailed', document.getElementById('showFailed').checked);
         localStorage.setItem('cores_showUnknown', document.getElementById('showUnknown').checked);
+        localStorage.setItem('cores_showProgress', document.getElementById('showProgress').checked);
         applyFilters();
       }
 
-      // Every row is exactly one of three things. "Failed" is everything the
+      // Every row is exactly one of four things. "Failed" is everything the
       // table draws red - a job that broke, and also a pipeline that is red for
       // a reason no column shows, such as a failure in a job this table has no
-      // column of its own for.
+      // column of its own for. A pipeline that is still queued or running is
+      // "progress" instead, and is not red until it has actually broken.
       function rowClass(row) {
         if (row.dataset.ok === 'true') return 'ok';
         if (row.dataset.unknown === 'true') return 'unknown';
+        if (row.dataset.running === 'true') return 'progress';
         return 'failed';
       }
 
       // The two "only" boxes narrow the table; unticking both means no
-      // narrowing at all, which is why the default shows everything. The
-      // unknown box does not narrow anything - it adds the pipelines there is
-      // nothing to say about to whatever the other two are showing, so on its
-      // own it changes nothing.
+      // narrowing at all, which is why the default shows everything. The other
+      // two boxes do not narrow anything - they add back the pipelines there is
+      // nothing to say about yet (no pipeline at all, or one still running) to
+      // whatever the "only" boxes are showing, so on their own they change
+      // nothing.
       function applyFilters() {
         const query = document.getElementById('filter').value.toLowerCase();
         const only = {
@@ -711,13 +732,16 @@
           failed: document.getElementById('showFailed').checked,
         };
         const narrowed = only.ok || only.failed;
-        const showUnknown = document.getElementById('showUnknown').checked;
+        const alsoShow = {
+          unknown: document.getElementById('showUnknown').checked,
+          progress: document.getElementById('showProgress').checked,
+        };
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
           const matchesQuery = row.dataset.search.includes(query);
           const cls = rowClass(row);
           const visible = !narrowed
-            || (cls === 'unknown' ? showUnknown : only[cls]);
+            || (cls in alsoShow ? alsoShow[cls] : only[cls]);
           row.style.display = (matchesQuery && visible) ? '' : 'none';
         }
       }
@@ -728,6 +752,7 @@
         document.getElementById('showOk').checked = localStorage.getItem('cores_showOk') === 'true';
         document.getElementById('showFailed').checked = localStorage.getItem('cores_showFailed') === 'true';
         document.getElementById('showUnknown').checked = localStorage.getItem('cores_showUnknown') === 'true';
+        document.getElementById('showProgress').checked = localStorage.getItem('cores_showProgress') === 'true';
         // No saved choice: reflect what the system is already giving them, and
         // leave the root unstamped so the media query stays in charge.
         const savedDark = localStorage.getItem('cores_dark');

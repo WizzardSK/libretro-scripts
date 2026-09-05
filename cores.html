@@ -133,10 +133,10 @@
       <span id="tokenstatus"></span>
     </div>
     <input type="text" id="filter" placeholder="Filter cores..." />
-    <label><input type="checkbox" id="showOk" onchange="saveAndApplyFilters()"> Show only OK</label>
-    <label><input type="checkbox" id="showFailed" onchange="saveAndApplyFilters()"> Show only failed</label>
-    <label><input type="checkbox" id="showUnknown" onchange="saveAndApplyFilters()"> Show unknown pipelines</label>
-    <label><input type="checkbox" id="showProgress" onchange="saveAndApplyFilters()"> Show unfinished pipelines</label>
+    <label><input type="checkbox" id="showPassed" onchange="saveAndApplyFilters()"> Passed</label>
+    <label><input type="checkbox" id="showFailed" onchange="saveAndApplyFilters()"> Failed</label>
+    <label><input type="checkbox" id="showProgress" onchange="saveAndApplyFilters()"> Unfinished</label>
+    <label><input type="checkbox" id="showUnknown" onchange="saveAndApplyFilters()"> Unknown</label>
     <label><input type="checkbox" id="darkMode" onchange="saveAndApplyTheme()"> Dark</label>
     <button id="refresh-all" onclick="refreshAll()" title="Refresh all cores">↻ Refresh All</button>
     <div id="legend">
@@ -699,11 +699,19 @@
         applyTheme();
       }
 
+      // One box per row class, remembered individually. The keys are new ones:
+      // the old boxes meant "show only this", so a saved true from those would
+      // mean the opposite of what it means now.
+      const FILTER_BOXES = {
+        ok: { box: 'showPassed', key: 'cores_show_passed', fallback: true },
+        failed: { box: 'showFailed', key: 'cores_show_failed', fallback: true },
+        progress: { box: 'showProgress', key: 'cores_show_unfinished', fallback: true },
+        unknown: { box: 'showUnknown', key: 'cores_show_unknown', fallback: false },
+      };
+
       function saveAndApplyFilters() {
-        localStorage.setItem('cores_showOk', document.getElementById('showOk').checked);
-        localStorage.setItem('cores_showFailed', document.getElementById('showFailed').checked);
-        localStorage.setItem('cores_showUnknown', document.getElementById('showUnknown').checked);
-        localStorage.setItem('cores_showProgress', document.getElementById('showProgress').checked);
+        for (const { box, key } of Object.values(FILTER_BOXES))
+          localStorage.setItem(key, document.getElementById(box).checked);
         applyFilters();
       }
 
@@ -719,40 +727,31 @@
         return 'failed';
       }
 
-      // The two "only" boxes narrow the table; unticking both means no
-      // narrowing at all, which is why the default shows everything. The other
-      // two boxes do not narrow anything - they add back the pipelines there is
-      // nothing to say about yet (no pipeline at all, or one still running) to
-      // whatever the "only" boxes are showing, so on their own they change
-      // nothing.
+      // Four boxes, one per row class, and they are cumulative: a row shows
+      // when its own box is ticked. Ticking none shows nothing, which is the
+      // honest reading of "show none of these" - and untangling the row classes
+      // is what the boxes are for, so each one has to be able to stand alone.
       function applyFilters() {
         const query = document.getElementById('filter').value.toLowerCase();
-        const only = {
-          ok: document.getElementById('showOk').checked,
-          failed: document.getElementById('showFailed').checked,
-        };
-        const narrowed = only.ok || only.failed;
-        const alsoShow = {
-          unknown: document.getElementById('showUnknown').checked,
-          progress: document.getElementById('showProgress').checked,
-        };
+        const show = {};
+        for (const [cls, { box }] of Object.entries(FILTER_BOXES))
+          show[cls] = document.getElementById(box).checked;
+
         const rows = document.querySelectorAll('#cores tr');
         for (const row of rows) {
           const matchesQuery = row.dataset.search.includes(query);
-          const cls = rowClass(row);
-          const visible = !narrowed
-            || (cls in alsoShow ? alsoShow[cls] : only[cls]);
-          row.style.display = (matchesQuery && visible) ? '' : 'none';
+          row.style.display = (matchesQuery && show[rowClass(row)]) ? '' : 'none';
         }
       }
 
       function setupFilter() {
-        // Unticked by default, which shows everything - the filters are there to
-        // narrow that down, not to hide part of the table before anyone asks.
-        document.getElementById('showOk').checked = localStorage.getItem('cores_showOk') === 'true';
-        document.getElementById('showFailed').checked = localStorage.getItem('cores_showFailed') === 'true';
-        document.getElementById('showUnknown').checked = localStorage.getItem('cores_showUnknown') === 'true';
-        document.getElementById('showProgress').checked = localStorage.getItem('cores_showProgress') === 'true';
+        // Everything that has something to say is on by default. Unknown is
+        // the exception: a pipeline there is nothing to read from is noise
+        // until somebody goes looking for it.
+        for (const { box, key, fallback } of Object.values(FILTER_BOXES)) {
+          const saved = localStorage.getItem(key);
+          document.getElementById(box).checked = saved !== null ? saved === 'true' : fallback;
+        }
         // No saved choice: reflect what the system is already giving them, and
         // leave the root unstamped so the media query stays in charge.
         const savedDark = localStorage.getItem('cores_dark');
